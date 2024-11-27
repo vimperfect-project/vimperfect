@@ -5,20 +5,16 @@ defmodule Vimperfect.Playground.SessionHandler do
 
   require Logger
 
+  @config Application.compile_env!(:vimperfect, Vimperfect.Playground)
+
   defp editor_runner(),
-    do:
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground)
-      |> Keyword.get(:editor_runner, Vimperfect.Playground.Editor.DefaultRunner)
+    do: @config |> Keyword.get(:editor_runner, Vimperfect.Playground.Editor.DefaultRunner)
 
   defp connection(),
-    do:
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground)
-      |> Keyword.get(:connection_wrapper, Vimperfect.Playground.Ssh.Connection)
+    do: @config |> Keyword.get(:connection_wrapper, Vimperfect.Playground.Ssh.Connection)
 
   defp editor_controls(),
-    do:
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground)
-      |> Keyword.get(:editor_controls, Vimperfect.Playground.Editor.NvimControls)
+    do: @config |> Keyword.get(:editor_controls, Vimperfect.Playground.Editor.NvimControls)
 
   @impl true
   def on_connect(conn, username, peer_address, method) do

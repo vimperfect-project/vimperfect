@@ -6,12 +6,14 @@ defmodule Vimperfect.Application do
   use Application
   require Logger
 
+  @config Application.compile_env!(:vimperfect, Vimperfect.Playground)
+
   @impl true
   def start(_type, _args) do
     ensure_sessions_dir!()
 
     server_enabled =
-      Application.get_env(:vimperfect, Vimperfect.Playground) |> Keyword.get(:server_enable, true)
+      @config |> Keyword.get(:server_enable, true)
 
     server =
       if server_enabled do
@@ -51,7 +53,7 @@ defmodule Vimperfect.Application do
 
   def ensure_sessions_dir!() do
     sessions_dir =
-      Application.get_env(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
+      @config |> Keyword.fetch!(:sessions_dir)
 
     if not File.dir?(sessions_dir) do
       Logger.debug("Creating missing sessions directory: #{sessions_dir}")

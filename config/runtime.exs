@@ -21,7 +21,9 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
-  Vimperfect.Playground.config_runtime()
+  # Note: there's no private data in the non-production environment for playground,
+  # so that's why for non-prod environment we opt in for the config directory instead of env vars
+  Vimperfect.Playground.Config.config_runtime!()
 
   database_url =
     System.get_env("DATABASE_URL") ||

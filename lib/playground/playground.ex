@@ -1,10 +1,10 @@
-defmodule Vimperfect.Playground do
-  def config_runtime() do
+defmodule Vimperfect.Playground.Config do
+  def config_runtime!() do
     import Config
 
-    ssh_system_dir = env_dir!("PLAYGROUND_SSH_SYSTEM_DIR")
-    sessions_dir = env_dir!("PLAYGROUND_SESSIONS_DIR")
-    ssh_port = port!("PLAYGROUND_SSH_PORT", 22)
+    ssh_system_dir = env_dir!("VIMPERFECT_SSH_SYSTEM_DIR")
+    sessions_dir = env_dir!("VIMPERFECT_SESSIONS_DIR")
+    ssh_port = port!("VIMPERFECT_SSH_PORT", 22)
 
     config :vimperfect, Vimperfect.Playground,
       ssh_system_dir: ssh_system_dir,

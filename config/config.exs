@@ -11,6 +11,11 @@ config :vimperfect,
   ecto_repos: [Vimperfect.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email,user:read"]}
+  ]
+
 # Configures the endpoint
 config :vimperfect, VimperfectWeb.Endpoint,
   url: [host: "localhost"],

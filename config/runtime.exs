@@ -20,6 +20,8 @@ if System.get_env("PHX_SERVER") do
   config :vimperfect, VimperfectWeb.Endpoint, server: true
 end
 
+Vimperfect.Config.config_runtime!()
+
 if config_env() == :prod do
   # Note: there's no private data in the non-production environment for playground,
   # so that's why for non-prod environment we opt in for the config directory instead of env vars

@@ -27,15 +27,29 @@ defmodule Vimperfect.Playground.SessionHandler do
   end
 
   @impl true
-  def auth(conn, _public_key, username) do
+  def auth(conn, public_key, username) do
     Logger.metadata(conn: conn)
+    Logger.debug("New auth request")
 
     # For some reason, auth is called twice,
     # so check if the auth is already set
     if not SessionContext.field_set?(conn, :auth) do
       case username do
         ~c"play" ->
-          SessionContext.set_field(conn, :auth, :with_public_key)
+          user =
+            :ssh_file.encode(
+              [{public_key, []}],
+              :openssh_key
+            )
+            |> String.trim()
+            |> Vimperfect.Accounts.get_user_by_public_key()
+
+          if user != nil do
+            SessionContext.set_field(conn, :auth, :with_public_key)
+          else
+            SessionContext.set_field(conn, :auth, :no_public_key)
+          end
+
           :ok
 
         _ ->
@@ -67,10 +81,18 @@ defmodule Vimperfect.Playground.SessionHandler do
     Logger.metadata(conn: ctx.conn, addr: SshUtil.addr_to_string(session.peer_address))
     Logger.info("Session ready")
 
-    connection().clear_screen(ctx)
-    connection().puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
+    if session.auth == :with_public_key do
+      connection().clear_screen(ctx)
+      connection().puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
+      :ok
+    else
+      connection().puts(
+        ctx,
+        "Could not find your public key. Make sure you have added it in your profile settings."
+      )
 
-    :ok
+      {:error, :normal}
+    end
   end
 
   @impl true

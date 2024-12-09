@@ -49,7 +49,13 @@ defmodule Vimperfect.Playground.Ssh.Authenticator do
     {_, ssh_cli_opts} = daemon_options |> Keyword.get(:ssh_cli)
     handler = Keyword.get(ssh_cli_opts, :handler)
 
-    handler.auth(self(), key, user) == :ok
+    case handler.auth(self(), key, user) do
+      :ok ->
+        true
+
+      {:error, _reaso} ->
+        false
+    end
   end
 
   # server uses this to find individual keys for an individual user when

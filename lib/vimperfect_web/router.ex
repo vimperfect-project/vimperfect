@@ -15,6 +15,10 @@ defmodule VimperfectWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :auth do
+    plug VimperfectWeb.Plugs.EnsureAuth
+  end
+
   scope "/auth", VimperfectWeb do
     pipe_through :browser
 
@@ -23,10 +27,18 @@ defmodule VimperfectWeb.Router do
     get "/:provider/callback", AuthController, :callback
   end
 
+  # Public routes
   scope "/", VimperfectWeb do
-    pipe_through :browser
+    pipe_through [:browser]
 
     get "/", PageController, :home
+  end
+
+  # Authorized routes
+  scope "/", VimperfectWeb do
+    pipe_through [:browser, :auth]
+
+    live "/profile", ProfileLive.Index, :index
   end
 
   # Other scopes may use custom stacks.

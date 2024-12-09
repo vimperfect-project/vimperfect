@@ -8,6 +8,8 @@ defmodule Vimperfect.Accounts.User do
     field :provider, Ecto.Enum, values: [:github]
     field :email, :string
 
+    has_many :public_keys, Vimperfect.Accounts.PublicKey
+
     timestamps(type: :utc_datetime)
   end
 

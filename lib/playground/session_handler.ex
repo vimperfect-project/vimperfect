@@ -1,20 +1,12 @@
 defmodule Vimperfect.Playground.SessionHandler do
+  alias Vimperfect.Playground.Editor.NvimControls
+  alias Vimperfect.Playground.Editor.NvimRunner
+  alias Vimperfect.Playground.Ssh
   alias Vimperfect.Playground.SessionContext
   alias Vimperfect.Playground.Ssh.Util, as: SshUtil
   @behaviour Vimperfect.Playground.Ssh.Handler
 
   require Logger
-
-  @config Application.compile_env!(:vimperfect, Vimperfect.Playground)
-
-  defp editor_runner(),
-    do: @config |> Keyword.get(:editor_runner, Vimperfect.Playground.Editor.DefaultRunner)
-
-  defp connection(),
-    do: @config |> Keyword.get(:connection_wrapper, Vimperfect.Playground.Ssh.Connection)
-
-  defp editor_controls(),
-    do: @config |> Keyword.get(:editor_controls, Vimperfect.Playground.Editor.NvimControls)
 
   @impl true
   def on_connect(conn, username, peer_address, method) do
@@ -81,17 +73,24 @@ defmodule Vimperfect.Playground.SessionHandler do
     Logger.metadata(conn: ctx.conn, addr: SshUtil.addr_to_string(session.peer_address))
     Logger.info("Session ready")
 
-    if session.auth == :with_public_key do
-      connection().clear_screen(ctx)
-      connection().puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
-      :ok
-    else
-      connection().puts(
-        ctx,
-        "Could not find your public key. Make sure you have added it in your profile settings."
-      )
+    cond do
+      ctx.term_mod == nil ->
+        Ssh.Connection.puts(ctx, "PTY is required for playground to work")
+        Logger.debug("Dropping connection because to PTY was setup")
+        {:error, :no_term_mod}
 
-      {:error, :normal}
+      session.auth == :no_public_key ->
+        Ssh.Connection.puts(
+          ctx,
+          "Could not find your public key. Make sure you have added it in your profile settings."
+        )
+
+        {:error, :normal}
+
+      true ->
+        Ssh.Connection.clear_screen(ctx)
+        Ssh.Connection.puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
+        :ok
     end
   end
 
@@ -105,7 +104,7 @@ defmodule Vimperfect.Playground.SessionHandler do
         handle_data(ctx, state, data)
 
       pid ->
-        editor_runner().write(pid, data)
+        NvimRunner.write(pid, data)
     end
   end
 
@@ -115,7 +114,7 @@ defmodule Vimperfect.Playground.SessionHandler do
     runner_pid = state[:runner_pid]
 
     if runner_pid != nil do
-      editor_runner().resize_window(runner_pid, cols, rows)
+      NvimRunner.resize_window(runner_pid, cols, rows)
     end
 
     :ok
@@ -133,11 +132,11 @@ defmodule Vimperfect.Playground.SessionHandler do
 
     if puzzle != nil do
       # TODO: Use different thing for session name since people may solve the same puzzle at the same time
-      editor_controls().clear_dir(sessions_dir, puzzle[:name])
+      NvimControls.clear_dir(sessions_dir, puzzle[:name])
     end
 
-    if state[:runner_pid] != nil and editor_runner().alive?(state[:runner_pid]) do
-      editor_runner().force_stop(state[:runner_pid])
+    if state[:runner_pid] != nil and NvimRunner.alive?(state[:runner_pid]) do
+      NvimRunner.force_stop(state[:runner_pid])
     end
 
     SessionContext.delete(conn)
@@ -154,11 +153,11 @@ defmodule Vimperfect.Playground.SessionHandler do
     puzzle = state[:puzzle]
 
     if state[:runner_pid] != nil do
-      editor_controls().clear_dir(sessions_dir, puzzle[:name])
+      NvimControls.clear_dir(sessions_dir, puzzle[:name])
       SessionContext.unset_field(ctx.conn, :runner_pid)
     end
 
-    # case editor_runner().check_solution(state[:puzzle]) do
+    # case NvimRunner.check_solution(state[:puzzle]) do
     #   {:ok, true, _keys} ->
     #     SshUtil.puts(ctx, "Congratulations, your solution is correct!")
 
@@ -170,8 +169,8 @@ defmodule Vimperfect.Playground.SessionHandler do
     #     SshUtil.puts(ctx, "Server error")
     # end
 
-    connection().clear_screen(ctx)
-    connection().puts(ctx, "No checking is done now, consider yourself right.")
+    Ssh.Connection.clear_screen(ctx)
+    Ssh.Connection.puts(ctx, "No checking is done now, consider yourself right.")
   end
 
   defp handle_data(ctx, state, data) do
@@ -195,13 +194,13 @@ defmodule Vimperfect.Playground.SessionHandler do
       Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
 
     {:ok, runner_pid} =
-      editor_runner().start_link(%{
-        on_output: &connection().write(ctx, &1),
+      NvimRunner.start_link(%{
+        on_output: &Ssh.Connection.write(ctx, &1),
         on_exit: fn _ -> on_puzzle_runner_exit(ctx) end
       })
 
     {:ok, filepath, keyspath} =
-      editor_controls().prepare_dir(
+      NvimControls.prepare_dir(
         sessions_dir,
         puzzle[:name],
         puzzle[:filename],
@@ -209,16 +208,16 @@ defmodule Vimperfect.Playground.SessionHandler do
       )
 
     # FIXME: May be a bug since we started the runner but if run puzzle fails we do not clear it
-    case editor_runner().run(runner_pid, filepath, keyspath) do
+    case NvimRunner.run(runner_pid, filepath, keyspath) do
       :ok ->
         {cols, rows} = ctx.size
-        editor_runner().resize_window(runner_pid, cols, rows)
+        NvimRunner.resize_window(runner_pid, cols, rows)
         SessionContext.set_field(ctx.conn, :runner_pid, runner_pid)
         :ok
 
       {:error, reason} ->
         Logger.error("Failed to start editor: #{inspect(reason)}")
-        connection().puts(ctx, "Sorry, unable to start the editor for you :(")
+        Ssh.Connection.puts(ctx, "Sorry, unable to start the editor for you :(")
         {:error, reason}
     end
   end

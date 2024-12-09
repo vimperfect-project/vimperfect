@@ -20,18 +20,14 @@ config :vimperfect, VimperfectWeb.Endpoint,
   secret_key_base: "VNGd5/bfUWdQkjakhnwi9aT/bWL2P7+IfMCeTIHUpQW79osfFs2zoZafqQkzH4df",
   server: false
 
-priv_dir = Path.join(__DIR__, "../apps/playground/test/priv/ssh") |> Path.expand()
+priv_dir = "test/priv/ssh" |> Path.expand()
 # Same as server, we don't enable the ssh server for playground
 config :vimperfect, Vimperfect.Playground,
-  server_enable: false,
+  # server_enable: false,
   ssh_system_dir: priv_dir,
   sessions_dir: "/tmp/vimperfect-sessions",
   ssh_port: 2222,
-  handler: Vimperfect.Playground.SessionHandler,
-  # Mocks for testing
-  editor_controls: EditorControlsMock,
-  editor_runner: EditorRunnerMock,
-  connection_wrapper: SshConnectionMock
+  handler: Vimperfect.Playground.SessionHandler
 
 # In test we don't send emails
 config :vimperfect, Vimperfect.Mailer, adapter: Swoosh.Adapters.Test

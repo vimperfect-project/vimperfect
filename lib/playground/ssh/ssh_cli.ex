@@ -6,12 +6,8 @@ defmodule Vimperfect.Playground.Ssh.Cli do
 
   It is responsible for setting up the SSH connection, initilizing PTY, window resizes and passing data to the handler as is comes.
   """
+  alias Vimperfect.Playground.Ssh
   @behaviour :ssh_server_channel
-
-  defp connection() do
-    Application.get_env(:vimperfect, Vimperfect.Playground)
-    |> Keyword.get(:connection_wrapper, Vimperfect.Playground.Ssh.Connection)
-  end
 
   require Logger
 
@@ -83,7 +79,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
     )
 
     if term_mod = Vimperfect.Playground.Ssh.TermInfo.lookup(to_string(term_string)) do
-      connection().reply_request(ctx(state), wr, :success)
+      Ssh.Connection.reply_request(ctx(state), wr, :success)
       init_term(%{state | term_mod: term_mod, cols: cols, rows: rows})
     else
       Logger.debug(
@@ -92,7 +88,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
         chan: chan
       )
 
-      connection().reply_request(ctx(state), wr, :failure)
+      Ssh.Connection.reply_request(ctx(state), wr, :failure)
       {:stop, chan, state}
     end
   end
@@ -102,7 +98,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
   #       {:ssh_cm, conn, {:env, chan, wr, key, val}},
   #       %{conn: conn, chan: chan} = state
   #     ) do
-  #   connection().reply_request(conn, wr, :success, chan)
+  #   Ssh.Connection.reply_request(conn, wr, :success, chan)
   #   {:ok, %{state | env: Map.put(state.env, to_string(key), to_string(val))}}
   # end
 
@@ -157,7 +153,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
     [:smcup, :smkx, :civis]
     |> Enum.filter(&function_exported?(term_mod, &1, 0))
     |> Enum.map(&apply(term_mod, &1, []))
-    |> Enum.each(&connection().write(ctx(state), &1))
+    |> Enum.each(&Ssh.Connection.write(ctx(state), &1))
 
     Logger.debug("Initialized term", conn: conn, chan: chan)
 
@@ -172,7 +168,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
       [:rmkx, :rmcup, :cnorm]
       |> Enum.filter(&function_exported?(term_mod, &1, 0))
       |> Enum.map(&apply(term_mod, &1, []))
-      |> Enum.each(&connection().write(ctx(state), &1))
+      |> Enum.each(&Ssh.Connection.write(ctx(state), &1))
     end
 
     Logger.debug("Terminating connection reason: #{inspect(reason)}")

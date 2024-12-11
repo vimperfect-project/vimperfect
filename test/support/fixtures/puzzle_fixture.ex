@@ -9,7 +9,7 @@ defmodule Vimperfect.PuzzlesFixtures do
         name: name,
         description: "Test description",
         initial_content: "hello, world!\nIt's nice to see you again",
-        expected_content: "hello",
+        expected_content: "hello, world!",
         author: author
       }
       |> Repo.insert!()

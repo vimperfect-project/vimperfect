@@ -1,6 +1,5 @@
 defmodule Vimperfect.Playground.SessionHandler do
   alias Vimperfect.Puzzles.Puzzle
-  alias Vimperfect.Playground.Editor.NvimControls
   alias Vimperfect.Playground.Editor.NvimRunner
   alias Vimperfect.Playground.Ssh
   alias Vimperfect.Playground.SessionContext
@@ -82,12 +81,9 @@ defmodule Vimperfect.Playground.SessionHandler do
         {:error, :normal}
 
       true ->
+        # TODO: Setup an AFK trigger that will periodically check if the user is still active
         session = SessionContext.set_field(ctx.conn, :puzzle, puzzle)
         run(ctx, session)
-
-        # Ssh.Connection.clear_screen(ctx)
-        # Ssh.Connection.puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
-        # :ok
     end
   end
 
@@ -97,7 +93,7 @@ defmodule Vimperfect.Playground.SessionHandler do
     runner_pid = session[:runner_pid]
 
     if runner_pid != nil do
-      :ok = NvimRunner.force_stop(runner_pid)
+      NvimRunner.kill(runner_pid)
     end
 
     :ok
@@ -131,57 +127,28 @@ defmodule Vimperfect.Playground.SessionHandler do
 
   @impl true
   def on_disconnect(conn, _reason) do
-    Logger.info("Disconnected, clearing everything up")
-
-    sessions_dir =
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
-
-    state = SessionContext.get(conn)
-    puzzle = state[:puzzle]
-
-    if puzzle != nil do
-      # TODO: Use different thing for session name since people may solve the same puzzle at the same time
-      NvimControls.clear_dir(sessions_dir, puzzle[:name])
-    end
-
-    if state[:runner_pid] != nil and NvimRunner.alive?(state[:runner_pid]) do
-      NvimRunner.force_stop(state[:runner_pid])
-    end
-
+    Logger.info("Disconnected, clearing the session")
     SessionContext.delete(conn)
-
-    Logger.info("Successfully disconnected")
   end
 
-  defp on_puzzle_runner_exit(ctx) do
+  defp on_runner_exit(ctx, final_content) do
     state = SessionContext.get(ctx.conn)
 
-    sessions_dir =
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
-
-    # puzzle = state[:puzzle]
-
     if state[:runner_pid] != nil do
-      NvimControls.clear_dir(sessions_dir, state[:session_name])
       SessionContext.unset_field(ctx.conn, :runner_pid)
     end
 
-    # case NvimControls.run_headless_emulation() do
-    # end
+    puzzle = state[:puzzle]
 
-    #   {:ok, true, _keys} ->
-    #     SshUtil.puts(ctx, "Congratulations, your solution is correct!")
+    Ssh.Connection.clear_screen(ctx)
 
-    #   {:ok, false, _keys} ->
-    #     SshUtil.puts(ctx, "Sorry, your solution is incorrect")
-
-    #   {:error, reason} ->
-    #     Logger.error("Failed to check solution: #{inspect(reason)}")
-    #     SshUtil.puts(ctx, "Server error")
-    # end
-
-    Ssh.Connection.puts(ctx, "No checking is done now, consider yourself right.")
-    Ssh.Connection.close(ctx)
+    if puzzle != nil and puzzle.expected_content == final_content do
+      Ssh.Connection.puts(ctx, "Congratulations, your solution is correct!")
+      Ssh.Connection.close(ctx)
+    else
+      Ssh.Connection.puts(ctx, "Sorry, your solution is incorrect")
+      Ssh.Connection.puts(ctx, "Press 'r' to run the solution again and 'q' to quit")
+    end
   end
 
   defp handle_data(ctx, state, data) do
@@ -190,46 +157,35 @@ defmodule Vimperfect.Playground.SessionHandler do
         Logger.debug("Quitting")
         {:error, :quit}
 
-      "e" ->
+      "r" ->
         # Note: state.puzzle MAY be nil, but this is ok since it'll be refactored so that puzzle runner cannot be called by a keypress
         run(ctx, state)
 
       _ ->
-        Logger.debug("Unknown key #{inspect(data)}")
         :ok
     end
   end
 
   defp run(ctx, %{puzzle: %Puzzle{} = puzzle} = _state) do
-    sessions_dir =
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
-
     {:ok, runner_pid} =
       NvimRunner.start_link(%{
         on_output: &Ssh.Connection.write(ctx, &1),
-        on_exit: fn _ -> on_puzzle_runner_exit(ctx) end
+        on_exit: fn _, final_content -> on_runner_exit(ctx, final_content) end
       })
 
-    # TODO: Move directory setup to runner
-
-    # TODO: DO not use ecto, rather a util func that returns a random UUID string
-    session_name = Ecto.UUID.generate()
-
-    {:ok, filepath, keyspath} =
-      NvimControls.prepare_dir(
-        sessions_dir,
-        session_name,
+    :ok =
+      NvimRunner.prepare_dir(
+        runner_pid,
         puzzle.filename || "input.txt",
         puzzle.initial_content
       )
 
     # FIXME: May be a bug since we started the runner but if run puzzle fails we do not clear it
-    case NvimRunner.run(runner_pid, filepath, keyspath) do
+    case NvimRunner.run(runner_pid) do
       :ok ->
         {cols, rows} = ctx.size
         NvimRunner.resize_window(runner_pid, cols, rows)
         SessionContext.set_field(ctx.conn, :runner_pid, runner_pid)
-        SessionContext.set_field(ctx.conn, :session_name, session_name)
         :ok
 
       {:error, reason} ->

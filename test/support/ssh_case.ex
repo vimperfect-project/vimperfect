@@ -7,8 +7,6 @@ defmodule Vimperfect.SshCase do
   test exits and the sandbox owner is stopped.
 
   After all tests are run, this test will clear all sessions located in the `sessions_dir` (configured in `Vimperfect.Playground`)
-
-  This module also provides a `ssh_conn/1` function to help building connections to the server.
   """
   alias Vimperfect.Playground.SessionContext
 
@@ -26,18 +24,6 @@ defmodule Vimperfect.SshCase do
   setup _tags do
     setup_sandbox()
     :ok
-  end
-
-  setup_all _ do
-    sessions_dir =
-      Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
-
-    on_exit(fn ->
-      File.ls!(sessions_dir)
-      |> Enum.each(fn file ->
-        File.rm_rf!(Path.join(sessions_dir, file))
-      end)
-    end)
   end
 
   @doc """

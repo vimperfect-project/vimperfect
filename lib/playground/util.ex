@@ -16,4 +16,12 @@ defmodule Vimperfect.Playground.Util do
 
     cmd <> " " <> user <> "@" <> host
   end
+
+  @doc """
+  Generates a random unique session name.
+  """
+  @spec generate_session_name() :: String.t()
+  def generate_session_name() do
+    Ecto.UUID.generate()
+  end
 end

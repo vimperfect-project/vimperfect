@@ -15,11 +15,6 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     keys_dir: @keys_dir
   ]
 
-  # TODO:
-  # - handles unknown keys
-  # - Handles exit key
-  # - Allow one user to connect only once (with presence I think?)
-
   def assert_pty_clear(conn, chan) do
     assert {:ok, data} = SSHClient.collect_response(conn, chan)
     assert data == Vimperfect.Playground.Ssh.TermInfo.Xterm256color.clear()
@@ -34,6 +29,22 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     AccountsFixtures.add_public_key_fixture(user, public_key)
 
     %{user: user}
+  end
+
+  defp create_puzzle(%{user: user}) do
+    puzzle = PuzzlesFixtures.puzzle_fixture(user, @ssh_user)
+
+    %{puzzle: puzzle}
+  end
+
+  defp create_conn(_) do
+    {conn, chan} = ssh_conn(@conn_settings)
+
+    on_exit(fn ->
+      SSHClient.close(conn, chan)
+    end)
+
+    %{conn: conn, chan: chan}
   end
 
   describe "Playground with invalid key / connection" do
@@ -95,12 +106,14 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
 
       assert :closed = SSHClient.collect_response(conn, chan)
     end
+  end
 
-    test "starts properly with valid client", %{user: user} do
-      puzzle = PuzzlesFixtures.puzzle_fixture(user, @ssh_user)
+  describe "Solving a puzzle" do
+    setup :create_user_with_test_public_key
+    setup :create_puzzle
+    setup :create_conn
 
-      {conn, chan} = ssh_conn(@conn_settings)
-
+    test "starts properly with valid client", %{puzzle: puzzle, conn: conn, chan: chan} do
       data =
         SSHClient.collect_all(conn, chan)
 
@@ -110,13 +123,16 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
       |> Enum.each(fn line ->
         assert data =~ line
       end)
-
-      # TODO: Move this to different test
-      # Closes properly on the "q" keypress
-      # assert :ok = SSHClient.send(conn, chan, "q")
-      # assert :closed = SSHClient.collect_response(conn, chan)
     end
-  end
 
-  # TODO: Check that it started the editor properly
+    test "properly passes with valid solution", %{conn: conn, chan: chan} do
+      # SKip the initial editor draw
+      _ = SSHClient.collect_all(conn, chan)
+      {:closed, resp} = SSHClient.send_keys(conn, chan, "jdd:wq\r")
+
+      assert resp =~ "Congratulations, your solution is correct!"
+    end
+
+    # TODO: Properly handles invalid solution and puzzle restart (try first invalid then valid)
+  end
 end

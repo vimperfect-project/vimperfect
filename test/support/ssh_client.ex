@@ -104,10 +104,31 @@ defmodule SSHClient do
         acc
 
       :closed ->
-        acc
+        {:closed, acc}
 
       {:unknown, _} ->
         acc
+    end
+  end
+
+  @doc """
+  Parses a string as a sequence of keypresses and sends them individually.
+  Drops the feedback except for the last key by default, use `all_feedback: true`
+  """
+  def send_keys(conn, chan, keys, opts \\ []) do
+    out =
+      keys
+      |> String.graphemes()
+      |> Enum.map(fn key ->
+        send(conn, chan, key)
+
+        collect_all(conn, chan)
+      end)
+
+    if Keyword.get(opts, :all_feedback, false) do
+      Enum.join(out, "")
+    else
+      List.last(out)
     end
   end
 

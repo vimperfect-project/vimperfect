@@ -47,6 +47,9 @@ defmodule Vimperfect.Playground.Ssh.Connection do
             ) :: :ok
   def reply_request(ctx, wr, status) do
     :ssh_connection.reply_request(ctx.conn, wr, status, ctx.chan)
-    :ok
+  end
+
+  def close(ctx) do
+    :ssh_connection.close(ctx.conn, ctx.chan)
   end
 end

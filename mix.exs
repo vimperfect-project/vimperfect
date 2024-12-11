@@ -34,6 +34,7 @@ defmodule Vimperfect.MixProject do
     [
       # Custom deps
       {:exexec, "~> 0.2"},
+      # {:erlexec, "~> 1.10"},
       {:ueberauth, "~> 0.7.0"},
       {:ueberauth_github, "~> 0.8.1"},
       {:ecto_commons, "~> 0.3.4"},

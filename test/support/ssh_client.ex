@@ -21,6 +21,10 @@ defmodule SSHClient do
     {:ok, conn, chan_id}
   end
 
+  def close(conn, chan) do
+    :ssh_connection.close(conn, chan)
+  end
+
   def request_shell(conn, chan) do
     :ssh_connection.shell(conn, chan)
   end
@@ -43,7 +47,7 @@ defmodule SSHClient do
       receive do
         {:ssh_cm, _, res} -> res
       after
-        timeout -> {:error, "Timeout. Did not receive data for #{timeout}ms."}
+        timeout -> {:timeout, "Timeout. Did not receive data for #{timeout}ms."}
       end
 
     case response do
@@ -67,8 +71,43 @@ defmodule SSHClient do
       {:closed, ^chan} ->
         :closed
 
+      {:timeout, err} ->
+        {:timeout, err}
+
       any ->
         {:unknown, any}
+    end
+  end
+
+  @doc """
+  Will run `collect_response/3` until the data is coming.
+
+  Timeout specifies the maximum time to wait for new data to come.
+  """
+  @spec collect_all(pid(), integer(), timeout()) :: binary()
+  def collect_all(conn, chan, timeout \\ 50) do
+    do_collect_all(conn, chan, timeout, "")
+  end
+
+  defp do_collect_all(conn, chan, timeout, acc) do
+    case collect_response(conn, chan, timeout) do
+      {:ok, data} ->
+        do_collect_all(conn, chan, timeout, acc <> data)
+
+      {:timeout, _} ->
+        acc
+
+      {:error, data} ->
+        acc <> data
+
+      :eof ->
+        acc
+
+      :closed ->
+        acc
+
+      {:unknown, _} ->
+        acc
     end
   end
 

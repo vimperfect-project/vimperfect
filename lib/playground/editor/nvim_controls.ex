@@ -16,21 +16,11 @@ defmodule Vimperfect.Playground.Editor.NvimControls do
   end
 
   def send_resize(os_pid, cols, rows) do
-    path = "/proc/#{os_pid}/fd/0"
-    command = "stty rows #{rows} cols #{cols} < #{path}"
-
-    # NOTE: May be slow to run :os.cmd on every resize. Is there a better way to control PTY window size?
-    case :os.cmd(String.to_charlist(command)) do
-      [] ->
-        :ok
-
-      _ ->
-        {:error, "Failed to set window size"}
-    end
+    :exec.winsz(os_pid, rows, cols)
   end
 
-  def force_stop(exec_pid, _os_pid) do
-    :ok = Exexec.stop(exec_pid)
+  def force_stop(_exec_pid, os_pid) do
+    Exexec.kill(os_pid, 9)
   end
 
   def prepare_dir(

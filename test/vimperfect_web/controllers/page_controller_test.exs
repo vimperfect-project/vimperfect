@@ -1,4 +1,5 @@
 defmodule VimperfectWeb.PageControllerTest do
+  alias Vimperfect.PuzzlesFixtures
   alias Vimperfect.AccountsFixtures
   alias Vimperfect.AccountsFixtures
   alias Vimperfect.Accounts.User
@@ -12,9 +13,12 @@ defmodule VimperfectWeb.PageControllerTest do
 
     test "with active user in session should return dashboard page", %{conn: conn} do
       user = AccountsFixtures.user_fixture()
+      puzzle = PuzzlesFixtures.puzzle_fixture(user)
 
       conn = conn |> Plug.Test.init_test_session(%{user_id: user.id}) |> get(~p"/")
       assert html_response(conn, 200) =~ "Welcome to Vimperfect, #{user.username}"
+      assert html_response(conn, 200) =~ "Available puzzles"
+      assert html_response(conn, 200) =~ puzzle.name
     end
 
     test "with non-existent user id in session should reset user assign and return home page",

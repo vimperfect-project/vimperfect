@@ -1,0 +1,22 @@
+<h1 class="text-3xl mb-4">
+  <%= @puzzle.name %>
+</h1>
+Connection string <pre><%= Vimperfect.Playground.Util.get_ssh_command_for_puzzle(@puzzle, VimperfectWeb.Endpoint.host()) %></pre>
+
+<br />
+
+<h2 class="text-xl mb-4">
+  Description
+</h2>
+<p>
+  <%= @puzzle.description %>
+</p>
+
+<br />
+
+<h2 class="text-xl mb-4">
+  Initial text
+</h2>
+<pre>
+  <%= @puzzle.initial_content %>
+</pre>

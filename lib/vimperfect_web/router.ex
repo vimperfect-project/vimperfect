@@ -39,6 +39,8 @@ defmodule VimperfectWeb.Router do
     pipe_through [:browser, :auth]
 
     live "/profile", ProfileLive.Index, :index
+
+    get "/puzzle/:slug", PuzzleController, :show
   end
 
   # Other scopes may use custom stacks.

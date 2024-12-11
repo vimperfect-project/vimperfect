@@ -12,6 +12,7 @@ defmodule Vimperfect.Playground.Ssh.TermInfo.Xterm256color do
   def clear(), do: "\e[H\e[2J"
   def civis(), do: "\e[?25l"
   def cnorm(), do: "\e[?12l\e[?25h"
+
   def colors(), do: 256
 
   def cup(row, col) do

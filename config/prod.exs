@@ -8,6 +8,11 @@ import Config
 config :vimperfect, VimperfectWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
+config :vimperfect, Vimperfect.Playground,
+  handler: Vimperfect.Playground.SessionHandler,
+  sessions_dir: "/tmp/vimperfect-sessions",
+  ssh_port: 2222
+
 # Configures Swoosh API Client
 config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Vimperfect.Finch
 

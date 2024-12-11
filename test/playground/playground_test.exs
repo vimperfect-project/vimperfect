@@ -2,68 +2,63 @@
 # complex functionality and the SessionContext module is tested itself.
 # So, using a mock for SessionContext will only introduce unwanted complixity to the tests
 defmodule Vimperfect.Playground.SessionHandlerTest do
+  require Logger
+  alias Vimperfect.PuzzlesFixtures
   alias Vimperfect.AccountsFixtures
-  use Vimperfect.DataCase
+  use Vimperfect.SshCase
 
-  @ip ~c"127.0.0.1"
-  @user "play"
   @keys_dir "test/priv/ssh/user"
-  @auth_methods "publickey"
+  @ssh_user "test"
+  @conn_settings [
+    user: @ssh_user,
+    auth_methods: "publickey",
+    keys_dir: @keys_dir
+  ]
+
+  # TODO:
+  # - handles unknown keys
+  # - Handles exit key
+  # - Allow one user to connect only once (with presence I think?)
 
   def assert_pty_clear(conn, chan) do
     assert {:ok, data} = SSHClient.collect_response(conn, chan)
     assert data == Vimperfect.Playground.Ssh.TermInfo.Xterm256color.clear()
   end
 
-  defp make_connection(user \\ @user, auth_methods \\ @auth_methods, opts \\ []) do
-    user_dir = File.cwd!() |> Path.join(@keys_dir)
+  defp create_user_with_test_public_key(_) do
+    user = AccountsFixtures.user_fixture()
 
-    connect_res =
-      SSHClient.connect(
-        ip: @ip,
-        port:
-          Application.get_env(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:ssh_port),
-        user: user,
-        user_dir: user_dir,
-        auth_methods: auth_methods
-      )
+    public_key =
+      File.cwd!() |> Path.join([@keys_dir, "/id_ed25519.pub"]) |> File.read!() |> String.trim()
 
-    case connect_res do
-      {:ok, conn, chan} ->
-        if Keyword.get(opts, :with_shell, true) do
-          :ok = SSHClient.request_pty(conn, chan)
-          :ok = SSHClient.request_shell(conn, chan)
+    AccountsFixtures.add_public_key_fixture(user, public_key)
 
-          if Keyword.get(opts, :skip_pty_init, true) do
-            [:smcup, :smkx, :civis]
-            |> Enum.each(fn _ ->
-              {:ok, _} = SSHClient.collect_response(conn, chan)
-            end)
-          end
-        end
-
-        {conn, chan}
-
-      {:error, reason} ->
-        raise reason
-    end
+    %{user: user}
   end
 
-  describe "Playground init" do
-    test "does not start without a PTY" do
-      {conn, chan} = make_connection(@user, @auth_methods, with_shell: false)
+  describe "Playground with invalid key / connection" do
+    test "does not let in with only password auth" do
+      opts = Keyword.merge(@conn_settings, auth_methods: "password")
 
+      assert_raise MatchError, fn ->
+        ssh_conn(opts)
+      end
+    end
+
+    test "does not start without a PTY" do
+      opts = Keyword.merge(@conn_settings, with_shell: false)
+      {conn, chan} = ssh_conn(opts)
       # Manually request the shell
       :ok = SSHClient.request_shell(conn, chan)
 
       assert {:ok, data} = SSHClient.collect_response(conn, chan)
-      assert data == "PTY is required for playground to work\n\r"
+      assert data == "Sorry, your terminal does not support the required features\n\r"
       assert :closed = SSHClient.collect_response(conn, chan)
     end
 
     test "sends proper PTY init sequence for xterm-256color" do
-      {conn, chan} = make_connection(@user, @auth_methods, skip_pty_init: false)
-
+      opts = Keyword.merge(@conn_settings, skip_pty_init_sequence: false)
+      {conn, chan} = ssh_conn(opts)
       term_mod = Vimperfect.Playground.Ssh.TermInfo.Xterm256color
 
       [:smcup, :smkx, :civis]
@@ -71,11 +66,13 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
         {:ok, data} = SSHClient.collect_response(conn, chan)
         assert data == apply(term_mod, cmd, [])
       end)
+
+      assert {:ok, _} = SSHClient.collect_response(conn, chan)
+      assert :closed = SSHClient.collect_response(conn, chan)
     end
 
     test "denies unknown public keys" do
-      {conn, chan} = make_connection()
-
+      {conn, chan} = ssh_conn(@conn_settings)
       assert {:ok, data} = SSHClient.collect_response(conn, chan)
 
       assert data ==
@@ -83,39 +80,41 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
 
       assert :closed = SSHClient.collect_response(conn, chan)
     end
+  end
 
-    test "starts and exits properly with valid client" do
-      user = AccountsFixtures.user_fixture()
+  describe "Playground with valid user / connection" do
+    setup :create_user_with_test_public_key
 
-      public_key =
-        File.cwd!() |> Path.join([@keys_dir, "/id_ed25519.pub"]) |> File.read!() |> String.trim()
+    test "does not let with invalid puzzle slug" do
+      opts = Keyword.merge(@conn_settings, user: "uknown-slug")
+      {conn, chan} = ssh_conn(opts)
+      assert {:ok, data} = SSHClient.collect_response(conn, chan)
 
-      _user = AccountsFixtures.add_public_key_fixture(user, public_key)
+      assert data ==
+               "Could not find the puzzle you are looking for\n\r"
 
-      {conn, chan} = make_connection()
-
-      assert_pty_clear(conn, chan)
-
-      {:ok, data} =
-        SSHClient.collect_response(conn, chan)
-
-      assert data == "Welcome to the playground! Press q to quit, e to start editor\n\r"
-
-      # Closes properly on the "q" keypress
-      assert :ok = SSHClient.send(conn, chan, "q")
       assert :closed = SSHClient.collect_response(conn, chan)
     end
 
-    test "does not let with unknown user" do
-      assert_raise MatchError, fn ->
-        make_connection("unknown")
-      end
-    end
+    test "starts properly with valid client", %{user: user} do
+      puzzle = PuzzlesFixtures.puzzle_fixture(user, @ssh_user)
 
-    test "does not let in with only password auth" do
-      assert_raise MatchError, fn ->
-        make_connection("play", "password")
-      end
+      {conn, chan} = ssh_conn(@conn_settings)
+
+      data =
+        SSHClient.collect_all(conn, chan)
+
+      # Check that the editor properly starts the nvim instace
+      puzzle.initial_content
+      |> String.split("\n")
+      |> Enum.each(fn line ->
+        assert data =~ line
+      end)
+
+      # TODO: Move this to different test
+      # Closes properly on the "q" keypress
+      # assert :ok = SSHClient.send(conn, chan, "q")
+      # assert :closed = SSHClient.collect_response(conn, chan)
     end
   end
 

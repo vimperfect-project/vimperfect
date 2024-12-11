@@ -161,7 +161,7 @@ defmodule Vimperfect.Playground.Ssh.Cli do
   end
 
   @impl true
-  def terminate(reason, %{term_mod: term_mod} = state) do
+  def terminate(reason, %{term_mod: term_mod, handler: handler} = state) do
     if term_mod != nil do
       _ = Code.ensure_loaded!(term_mod)
 
@@ -170,6 +170,8 @@ defmodule Vimperfect.Playground.Ssh.Cli do
       |> Enum.map(&apply(term_mod, &1, []))
       |> Enum.each(&Ssh.Connection.write(ctx(state), &1))
     end
+
+    handler.on_terminate(ctx(state))
 
     Logger.debug("Terminating connection reason: #{inspect(reason)}")
     :ok

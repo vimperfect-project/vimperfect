@@ -38,6 +38,15 @@ defmodule Vimperfect.Playground.Ssh.Server do
   end
 
   @impl true
+  def terminate(_reason, state) do
+    pid = state[:pid]
+
+    if pid != nil do
+      :ssh.stop_daemon(state.pid)
+    end
+  end
+
+  @impl true
   def handle_cast(:start, state) do
     port = Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:ssh_port)
 
@@ -64,9 +73,10 @@ defmodule Vimperfect.Playground.Ssh.Server do
 
     case start_result do
       {:ok, pid} ->
-        Logger.info("SSH server started on port #{port}")
+        state = %{state | pid: pid}
         Process.link(pid)
-        {:noreply, %{state | pid: pid}, :hibernate}
+        Logger.info("SSH server started on port #{port}")
+        {:noreply, %{state | pid: pid}}
 
       {:error, :eaddrinuse} ->
         :ok = Logger.error("Unable to bind to local TCP port; the address is already in use")

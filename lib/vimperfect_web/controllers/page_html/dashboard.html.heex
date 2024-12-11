@@ -3,5 +3,22 @@
   Welcome to Vimperfect, <%= @user.username %>
   <br />
 
-  <a href={~p"/profile"}>Go to profile settings</a>
+  <.link navigate={~p"/profile"} class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80">
+    Go to profile settings
+  </.link>
+  <br />
+  <br />
+
+  <h1 class="text-3xl mb-4">Available puzzles</h1>
+  <%= for puzzle <- @puzzles do %>
+    <div class="flex items-center gap-3">
+      <span><%= puzzle.name %></span>
+      <.link
+        navigate={~p"/puzzle/#{puzzle}"}
+        class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80"
+      >
+        Go to puzzle
+      </.link>
+    </div>
+  <% end %>
 </div>

@@ -6,6 +6,8 @@ defmodule Vimperfect.Util do
   @sk_regex ~r/^sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t[0-9A-Za-z+\/]+[=]{0,3}$/
   @rsa_regex ~r/^ssh-rsa AAAAB3NzaC1yc2[0-9A-Za-z+\/]+[=]{0,3}$/
 
+  @filename_regex ~r/^[\w\-\.]+$/
+
   @doc """
   Validates if the given public key is a valid OpenSSH public key. Important thing to note is that keys must not have a comment at the end.
   To strip the comment, use `Vimperfect.Util.strip_openssh_public_key_comment/1`
@@ -24,5 +26,13 @@ defmodule Vimperfect.Util do
   """
   def strip_openssh_public_key_comment(public_key) do
     public_key |> String.split(" ", trim: true) |> Enum.take(2) |> Enum.join(" ")
+  end
+
+  @doc """
+  Returns true if the given filename is valid. Any filename that does only contain alphanumeric characters, underscores, dashes and dots is considered valid.
+  """
+  @spec valid_filename?(String.t()) :: boolean()
+  def valid_filename?(filename) do
+    String.match?(filename, @filename_regex)
   end
 end

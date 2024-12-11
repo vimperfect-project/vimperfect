@@ -1,4 +1,5 @@
 defmodule Vimperfect.Playground.SessionHandler do
+  alias Vimperfect.Puzzles.Puzzle
   alias Vimperfect.Playground.Editor.NvimControls
   alias Vimperfect.Playground.Editor.NvimRunner
   alias Vimperfect.Playground.Ssh
@@ -23,47 +24,33 @@ defmodule Vimperfect.Playground.SessionHandler do
     Logger.metadata(conn: conn)
     Logger.debug("New auth request")
 
+    session = SessionContext.get(conn)
+
     # For some reason, auth is called twice,
-    # so check if the auth is already set
-    if not SessionContext.field_set?(conn, :auth) do
-      case username do
-        ~c"play" ->
-          user =
-            :ssh_file.encode(
-              [{public_key, []}],
-              :openssh_key
-            )
-            |> String.trim()
-            |> Vimperfect.Accounts.get_user_by_public_key()
+    # so check if the auth is already set or if the previous key was invalid
+    if not SessionContext.field_set?(conn, :auth) or session.auth == :invalid do
+      SessionContext.set_field(conn, :puzzle_slug, username |> List.to_string())
 
-          if user != nil do
-            SessionContext.set_field(conn, :auth, :with_public_key)
-          else
-            SessionContext.set_field(conn, :auth, :no_public_key)
-          end
+      user =
+        :ssh_file.encode(
+          [{public_key, []}],
+          :openssh_key
+        )
+        |> String.trim()
+        |> Vimperfect.Accounts.get_user_by_public_key()
 
-          :ok
-
-        _ ->
-          {:error, :normal}
+      if user != nil do
+        SessionContext.set_field(conn, :auth, :ok)
+      else
+        SessionContext.set_field(conn, :auth, :invalid)
       end
-    else
-      :ok
     end
+
+    :ok
   end
 
   @impl true
-  def init(ctx) do
-    # Note: temporary solution
-    puzzle_info = %{
-      name: "testtask",
-      filename: "puzzle.txt",
-      content: "Hello, my name is Ali(bob)ce",
-      expected_content: "Hello, my name is Alice"
-    }
-
-    SessionContext.set_field(ctx.conn, :puzzle, puzzle_info)
-
+  def init(_ctx) do
     :ok
   end
 
@@ -73,13 +60,15 @@ defmodule Vimperfect.Playground.SessionHandler do
     Logger.metadata(conn: ctx.conn, addr: SshUtil.addr_to_string(session.peer_address))
     Logger.info("Session ready")
 
+    puzzle = Vimperfect.Puzzles.get_puzzle_by_slug(session.puzzle_slug)
+
     cond do
       ctx.term_mod == nil ->
-        Ssh.Connection.puts(ctx, "PTY is required for playground to work")
-        Logger.debug("Dropping connection because to PTY was setup")
-        {:error, :no_term_mod}
+        Ssh.Connection.puts(ctx, "Sorry, your terminal does not support the required features")
 
-      session.auth == :no_public_key ->
+        {:error, :normal}
+
+      session.auth == :invalid ->
         Ssh.Connection.puts(
           ctx,
           "Could not find your public key. Make sure you have added it in your profile settings."
@@ -87,11 +76,31 @@ defmodule Vimperfect.Playground.SessionHandler do
 
         {:error, :normal}
 
+      puzzle == nil ->
+        Ssh.Connection.puts(ctx, "Could not find the puzzle you are looking for")
+
+        {:error, :normal}
+
       true ->
-        Ssh.Connection.clear_screen(ctx)
-        Ssh.Connection.puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
-        :ok
+        session = SessionContext.set_field(ctx.conn, :puzzle, puzzle)
+        run(ctx, session)
+
+        # Ssh.Connection.clear_screen(ctx)
+        # Ssh.Connection.puts(ctx, "Welcome to the playground! Press q to quit, e to start editor")
+        # :ok
     end
+  end
+
+  @impl true
+  def on_terminate(ctx) do
+    session = SessionContext.delete(ctx.conn)
+    runner_pid = session[:runner_pid]
+
+    if runner_pid != nil do
+      :ok = NvimRunner.force_stop(runner_pid)
+    end
+
+    :ok
   end
 
   @impl true
@@ -150,14 +159,16 @@ defmodule Vimperfect.Playground.SessionHandler do
     sessions_dir =
       Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
 
-    puzzle = state[:puzzle]
+    # puzzle = state[:puzzle]
 
     if state[:runner_pid] != nil do
-      NvimControls.clear_dir(sessions_dir, puzzle[:name])
+      NvimControls.clear_dir(sessions_dir, state[:session_name])
       SessionContext.unset_field(ctx.conn, :runner_pid)
     end
 
-    # case NvimRunner.check_solution(state[:puzzle]) do
+    # case NvimControls.run_headless_emulation() do
+    # end
+
     #   {:ok, true, _keys} ->
     #     SshUtil.puts(ctx, "Congratulations, your solution is correct!")
 
@@ -169,8 +180,8 @@ defmodule Vimperfect.Playground.SessionHandler do
     #     SshUtil.puts(ctx, "Server error")
     # end
 
-    Ssh.Connection.clear_screen(ctx)
     Ssh.Connection.puts(ctx, "No checking is done now, consider yourself right.")
+    Ssh.Connection.close(ctx)
   end
 
   defp handle_data(ctx, state, data) do
@@ -189,7 +200,7 @@ defmodule Vimperfect.Playground.SessionHandler do
     end
   end
 
-  defp run(ctx, %{puzzle: puzzle} = _state) do
+  defp run(ctx, %{puzzle: %Puzzle{} = puzzle} = _state) do
     sessions_dir =
       Application.fetch_env!(:vimperfect, Vimperfect.Playground) |> Keyword.fetch!(:sessions_dir)
 
@@ -199,12 +210,17 @@ defmodule Vimperfect.Playground.SessionHandler do
         on_exit: fn _ -> on_puzzle_runner_exit(ctx) end
       })
 
+    # TODO: Move directory setup to runner
+
+    # TODO: DO not use ecto, rather a util func that returns a random UUID string
+    session_name = Ecto.UUID.generate()
+
     {:ok, filepath, keyspath} =
       NvimControls.prepare_dir(
         sessions_dir,
-        puzzle[:name],
-        puzzle[:filename],
-        puzzle[:content]
+        session_name,
+        puzzle.filename || "input.txt",
+        puzzle.initial_content
       )
 
     # FIXME: May be a bug since we started the runner but if run puzzle fails we do not clear it
@@ -213,6 +229,7 @@ defmodule Vimperfect.Playground.SessionHandler do
         {cols, rows} = ctx.size
         NvimRunner.resize_window(runner_pid, cols, rows)
         SessionContext.set_field(ctx.conn, :runner_pid, runner_pid)
+        SessionContext.set_field(ctx.conn, :session_name, session_name)
         :ok
 
       {:error, reason} ->

@@ -45,9 +45,19 @@ defmodule Vimperfect.Playground.SessionContext do
     not unset
   end
 
-  @spec delete(pid()) :: :ok
+  @spec delete(pid()) :: session()
   def delete(pid) do
+    session = find_session(pid)
     Agent.update(__MODULE__, &Map.delete(&1, pid))
+    session
+  end
+
+  @doc """
+  Returns list of all session pids
+  """
+  @spec list() :: %{pid() => session()}
+  def list() do
+    Agent.get(__MODULE__, & &1)
   end
 
   @spec find_session(pid()) :: session()

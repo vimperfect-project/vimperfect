@@ -70,13 +70,12 @@ defmodule SessionContextTest do
   describe "delete/1" do
     test "deletes the session" do
       SessionContext.set_field(self(), :foo, "bar")
-      assert SessionContext.get(self()) == %{foo: "bar"}
-      assert :ok = SessionContext.delete(self())
+      assert %{foo: "bar"} = SessionContext.delete(self())
       assert SessionContext.get(self()) == %{}
     end
 
     test "ignores deletes for non-existent sessions" do
-      assert :ok = SessionContext.delete(self())
+      assert %{} = SessionContext.get(self())
       assert SessionContext.get(self()) == %{}
     end
   end

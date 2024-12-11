@@ -36,7 +36,11 @@ config :vimperfect, Vimperfect.Mailer, adapter: Swoosh.Adapters.Test
 config :swoosh, :api_client, false
 
 # Print only warnings and errors during test
-config :logger, level: :warning
+config :logger, level: :error
+
+config :logger, :console,
+  format: "[$level] $message | $metadata\n",
+  metadata: [:request_id, :addr, :conn, :chan, :mfa]
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

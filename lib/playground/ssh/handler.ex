@@ -31,7 +31,7 @@ defmodule Vimperfect.Playground.Ssh.Handler do
 
   @doc """
   Called when a new SSH connection is established to the server.
-  This will be called before the `Vimperfect.Playground.Ssh.Handler.auth/3` callback.
+  This will be after before the `Vimperfect.Playground.Ssh.Handler.auth/3` callback.
 
   At this step, there's no actual context that is passed, since the connection just appeared and no CLI was created at this point.
   """
@@ -43,7 +43,7 @@ defmodule Vimperfect.Playground.Ssh.Handler do
             ) :: :ok
 
   @doc """
-  Called when the client authenticates with the server.
+  Called when the client authenticates with the server, it is the first callback that is called when a new connection is established.
 
   It should return `:ok` if the authentication was successful, or `{:error, reason}` if it was not.
   """
@@ -90,4 +90,6 @@ defmodule Vimperfect.Playground.Ssh.Handler do
   This is the right palce to clean up any resources that were allocated during the connection.
   """
   @callback on_disconnect(conn :: :ssh.connection_ref(), reason :: term()) :: :ok
+
+  @callback on_terminate(context()) :: :ok
 end

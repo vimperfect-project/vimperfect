@@ -10,7 +10,7 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
 
   def force_stop(pid) do
     if alive?(pid) do
-      GenServer.cast(pid, {:force_stop})
+      GenServer.call(pid, {:force_stop})
       :ok
     else
       {:error, :not_running}
@@ -54,6 +54,7 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
     GenServer.cast(pid, {:resize, cols, rows})
   end
 
+  @impl true
   def init(opts) do
     {:ok,
      %{
@@ -64,6 +65,7 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
      }}
   end
 
+  @impl true
   def handle_call({:run, filepath, keyspath}, _from, state) do
     if state.exec_pid == nil do
       {:ok, pid, os_pid} = NvimControls.run_editor(filepath, keyspath, self())
@@ -88,19 +90,29 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
     end
   end
 
+  def handle_call({:force_stop}, _from, state) do
+    res = NvimControls.force_stop(state.exec_pid, state.os_pid)
+    {:reply, res, state}
+  end
+
   def handle_call(:process_alive?, _from, state) do
     {:reply, state.exec_pid != nil && Process.alive?(state.exec_pid), state}
   end
 
   def handle_call({:write, data}, _from, state) do
     if state.os_pid != nil do
-      NvimControls.send_input(state.os_pid, data)
+      # This will ignore any mouse related events, since real ninjas don't use mouse
+      if not String.starts_with?(data, "\e[") do
+        NvimControls.send_input(state.os_pid, data)
+      end
+
       {:reply, :ok, state}
     else
       {:reply, {:error, :not_running}, state}
     end
   end
 
+  @impl true
   def handle_cast({:resize, cols, rows}, state) do
     if state.os_pid != nil do
       :ok = NvimControls.send_resize(state.os_pid, cols, rows)
@@ -110,11 +122,7 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
     end
   end
 
-  def handle_cast({:force_stop}, state) do
-    :ok = NvimControls.force_stop(state.exec_pid, state.os_pid)
-    {:noreply, state}
-  end
-
+  @impl true
   def handle_info({:stdout, _os_pid, data}, state) do
     state.on_output.(data)
     {:noreply, state}
@@ -125,8 +133,18 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
     {:stop, reason, %{state | exec_pid: nil, os_pid: nil}}
   end
 
+  @impl true
   def terminate(reason, state) do
+    IO.puts("Clearing up")
     state.on_exit.(reason)
+
+    if state.exec_pid != nil do
+      Logger.debug("Killing editor process #{inspect(state.exec_pid)}")
+      :ok = NvimControls.force_stop(state.exec_pid, state.os_pid)
+    end
+
+    # NvimControls.clear_dir(sessions_dir, puzzle[:name])
+
     :ok
   end
 end

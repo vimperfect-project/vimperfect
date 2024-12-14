@@ -22,7 +22,7 @@
 
   <%= for {key, index} <- @user.public_keys |> Enum.with_index() do %>
     <div class="flex items-center gap-3">
-      <span>Key <%= index + 1 %> ************</span>
+      <span>Key {index + 1} ************</span>
       <.button
         phx-click="remove-pk"
         phx-value-public_key_id={key.id}

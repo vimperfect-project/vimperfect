@@ -23,6 +23,7 @@ defmodule Vimperfect.Puzzles.Puzzle do
     |> cast(attrs, [:name, :slug, :description, :initial_content, :expected_content, :author_id])
     # although author_id can be nil, it cannot be empty when updating from the app
     |> validate_required([:name, :description, :author_id])
+    |> assoc_constraint(:author)
     |> validate_length(:name, min: 3, max: 50)
     |> validate_length(:description, min: 30, max: 500)
     |> validate_length(:initial_content, min: 1, max: 5000)

@@ -8,7 +8,8 @@ defmodule Vimperfect.Accounts.PublicKey do
 
   schema "public_keys" do
     field :key, :string, redact: true
-    field :user_id, :id
+
+    belongs_to :user, Vimperfect.Accounts.User
 
     timestamps(type: :utc_datetime)
   end
@@ -18,6 +19,7 @@ defmodule Vimperfect.Accounts.PublicKey do
     public_key
     |> cast(attrs, [:key, :user_id])
     |> validate_required([:key, :user_id])
+    |> assoc_constraint(:user)
     |> validate_change(:key, fn :key, key ->
       if Vimperfect.Util.valid_openssh_public_key?(key) do
         []

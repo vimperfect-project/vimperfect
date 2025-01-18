@@ -130,6 +130,8 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
       # This will ignore any mouse related events, since real ninjas don't use mouse
       if not String.starts_with?(data, "\e[") do
         NvimControls.send_input(state.os_pid, data)
+      else
+        Logger.debug("Ignored mouse event")
       end
 
       {:reply, :ok, state}
@@ -171,12 +173,15 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
       :ok = NvimControls.force_stop(state.exec_pid, state.os_pid)
     end
 
-    final_contents =
+    {final_contents, keystrokes} =
       if state.file_path != nil do
         # Trimming last newline since `read!` appends a newline for last line in file
-        File.read!(state.file_path) |> String.replace_suffix("\n", "")
+        {
+          File.read!(state.file_path) |> String.replace_suffix("\n", ""),
+          File.read!(state.file_path |> Path.dirname() |> Path.join("keys.txt"))
+        }
       else
-        nil
+        {nil, nil}
       end
 
     if state.file_path != nil do
@@ -185,7 +190,7 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
       {:ok, _} = File.rm_rf(dir)
     end
 
-    state.on_exit.(reason, final_contents)
+    state.on_exit.(reason, final_contents, keystrokes)
 
     :ok
   end

@@ -14,6 +14,8 @@ priv_dir = "test/priv/ssh" |> Path.expand()
 
 config :vimperfect, Vimperfect.Playground,
   handler: Vimperfect.Playground.SessionHandler,
+  # Stripped exit sequence and the score of it can be changed
+  # stripped_exit_sequence: {":wq<CR>", 4},
   ssh_system_dir: priv_dir,
   sessions_dir: "/tmp/vimperfect-sessions",
   ssh_port: 2222

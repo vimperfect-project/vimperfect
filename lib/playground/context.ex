@@ -1,5 +1,8 @@
 defmodule Vimperfect.Playground.SessionContext do
-  @moduledoc false
+  @moduledoc """
+  This module used to store a session context. Session handler can write any fields to here.
+  By default a session is an empty map
+  """
   alias Vimperfect.Playground.Ssh.Types
   require Logger
 
@@ -12,10 +15,7 @@ defmodule Vimperfect.Playground.SessionContext do
   end
 
   @type session :: %{
-          required(:peer_address) => Types.peer_address(),
-          :auth => Types.public_key_status(),
-          puzzle: any(),
-          runner_pid: pid() | nil
+          any() => Types.peer_address()
         }
 
   @spec get(pid()) :: session() | nil

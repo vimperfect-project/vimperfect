@@ -27,7 +27,7 @@ defmodule Vimperfect.Playground.SessionHandler do
 
     # For some reason, auth is called twice,
     # so check if the auth is already set or if the previous key was invalid
-    if not SessionContext.field_set?(conn, :auth) or session.auth == :invalid do
+    if not SessionContext.field_set?(conn, :user) or session.user == nil do
       SessionContext.set_field(conn, :puzzle_slug, username |> List.to_string())
 
       user =
@@ -38,11 +38,7 @@ defmodule Vimperfect.Playground.SessionHandler do
         |> String.trim()
         |> Vimperfect.Accounts.get_user_by_public_key()
 
-      if user != nil do
-        SessionContext.set_field(conn, :auth, :ok)
-      else
-        SessionContext.set_field(conn, :auth, :invalid)
-      end
+      SessionContext.set_field(conn, :user, user)
     end
 
     :ok
@@ -67,7 +63,7 @@ defmodule Vimperfect.Playground.SessionHandler do
 
         {:error, :normal}
 
-      session.auth == :invalid ->
+      session.user == nil ->
         Ssh.Connection.puts(
           ctx,
           "Could not find your public key. Make sure you have added it in your profile settings."
@@ -102,7 +98,6 @@ defmodule Vimperfect.Playground.SessionHandler do
   @impl true
   def on_data(ctx, data) do
     state = SessionContext.get(ctx.conn)
-    Logger.debug("Received data #{inspect(data)}")
 
     case state[:runner_pid] do
       nil ->
@@ -131,7 +126,7 @@ defmodule Vimperfect.Playground.SessionHandler do
     SessionContext.delete(conn)
   end
 
-  defp on_runner_exit(ctx, final_content) do
+  defp on_runner_exit(ctx, final_content, keystrokes) do
     state = SessionContext.get(ctx.conn)
 
     if state[:runner_pid] != nil do
@@ -143,8 +138,27 @@ defmodule Vimperfect.Playground.SessionHandler do
     Ssh.Connection.clear_screen(ctx)
 
     if puzzle != nil and puzzle.expected_content == final_content do
-      Ssh.Connection.puts(ctx, "Congratulations, your solution is correct!")
-      Ssh.Connection.close(ctx)
+      {solution, score} =
+        Vimperfect.Keystrokes.convert_keystrokes(keystrokes)
+        |> Vimperfect.Keystrokes.strip_exit_sequence()
+
+      existing = Vimperfect.Puzzles.get_solution_by_keystrokes(state.user, puzzle, solution)
+
+      SessionContext.set_field(ctx.conn, :last_solution, {solution, score})
+
+      Ssh.Connection.puts(
+        ctx,
+        """
+        Congratulations, your solution is correct!
+        Your solution: #{solution}
+        Score: #{score}
+
+        #{if existing != nil, do: "Note: You've already done this solution, so nothing will happen after submission", else: "This is a new solution!"}
+
+        Press 's' to submit, 'r' to run the solution again and 'q' to quit
+        """,
+        multiline: true
+      )
     else
       Ssh.Connection.puts(ctx, "Sorry, your solution is incorrect")
       Ssh.Connection.puts(ctx, "Press 'r' to run the solution again and 'q' to quit")
@@ -156,6 +170,32 @@ defmodule Vimperfect.Playground.SessionHandler do
       "q" ->
         Logger.debug("Quitting")
         {:error, :quit}
+
+      "s" ->
+        case state[:last_solution] do
+          {solution, score} ->
+            Ssh.Connection.puts(
+              ctx,
+              "Submitting your final solution #{solution} which scored #{score}"
+            )
+
+            case Vimperfect.Puzzles.submit_solution!({solution, score}, state.user, state.puzzle) do
+              :ignored ->
+                Ssh.Connection.puts(
+                  ctx,
+                  "Since you already have this solution, saving was skipped."
+                )
+
+              _ ->
+                nil
+            end
+
+            # Exit
+            {:error, :submit}
+
+          nil ->
+            :ok
+        end
 
       "r" ->
         # Note: state.puzzle MAY be nil, but this is ok since it'll be refactored so that puzzle runner cannot be called by a keypress
@@ -170,7 +210,9 @@ defmodule Vimperfect.Playground.SessionHandler do
     {:ok, runner_pid} =
       NvimRunner.start_link(%{
         on_output: &Ssh.Connection.write(ctx, &1),
-        on_exit: fn _, final_content -> on_runner_exit(ctx, final_content) end
+        on_exit: fn _, final_content, keystrokes ->
+          on_runner_exit(ctx, final_content, keystrokes)
+        end
       })
 
     :ok =

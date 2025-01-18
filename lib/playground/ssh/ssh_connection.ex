@@ -10,8 +10,12 @@ defmodule Vimperfect.Playground.Ssh.Connection do
   """
   @spec puts(Handler.context(), msg :: iodata()) :: :ok
   @callback puts(Handler.context(), msg :: iodata()) :: :ok
-  def puts(ctx, msg) do
-    write(ctx, [msg | ~c"\n\r"])
+  def puts(ctx, msg, opts \\ []) do
+    if Keyword.get(opts, :multiline, false) do
+      write(ctx, msg |> String.replace("\n", "\n\r"))
+    else
+      write(ctx, msg <> "\n\r")
+    end
   end
 
   @doc """

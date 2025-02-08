@@ -33,8 +33,7 @@ defmodule Vimperfect.MixProject do
   defp deps do
     [
       # Custom deps
-      {:exexec, "~> 0.2"},
-      # {:erlexec, "~> 1.10"},
+      {:erlexec, "~> 2.0"},
       {:ueberauth, "~> 0.7.0"},
       {:ueberauth_github, "~> 0.8.1"},
       {:ecto_commons, "~> 0.3.4"},
@@ -58,7 +57,7 @@ defmodule Vimperfect.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:swoosh, "~> 1.5"},
+      {:swoosh, "~> 1.17.10"},
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},

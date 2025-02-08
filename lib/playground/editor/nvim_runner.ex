@@ -168,6 +168,8 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
   def terminate(reason, state) do
     Logger.debug("Editor runner is terminating with reason #{inspect(reason)}")
 
+    # TODO: Add handling of bad exists and show them to a user with possible solutions
+
     if state.exec_pid != nil do
       Logger.debug("Killing editor process #{inspect(state.exec_pid)}")
       :ok = NvimControls.force_stop(state.exec_pid, state.os_pid)
@@ -175,11 +177,17 @@ defmodule Vimperfect.Playground.Editor.NvimRunner do
 
     {final_contents, keystrokes} =
       if state.file_path != nil do
-        # Trimming last newline since `read!` appends a newline for last line in file
-        {
-          File.read!(state.file_path) |> String.replace_suffix("\n", ""),
-          File.read!(state.file_path |> Path.dirname() |> Path.join("keys.txt"))
-        }
+        keys_path = state.file_path |> Path.dirname() |> Path.join("keys.txt")
+        valid_files = File.exists?(state.file_path) && File.exists?(keys_path)
+
+        final_contents =
+          if valid_files,
+            do: File.read!(state.file_path) |> String.replace_suffix("\n", ""),
+            else: nil
+
+        keystrokes = if valid_files, do: File.read!(keys_path), else: nil
+
+        {final_contents, keystrokes}
       else
         {nil, nil}
       end

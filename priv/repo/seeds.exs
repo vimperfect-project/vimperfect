@@ -39,20 +39,24 @@ puzzles = [
     description: "Leave only the first parameter in the `greet` function definition",
     author_id: user.id,
     filename: "main.ex",
-    initial_content: """
-    defmodule Main do
-      def greet(name, age \\\\ 25) do
-        IO.puts("Hello, \#{name}!")
+    initial_content:
+      """
+      defmodule Main do
+        def greet(name, age \\\\ 25) do
+          IO.puts("Hello, \#{name}!")
+        end
       end
-    end
-    """,
-    expected_content: """
-    defmodule Main do
-      def greet(name) do
-        IO.puts("Hello, \#{name}!")
+      """
+      |> String.trim(),
+    expected_content:
+      """
+      defmodule Main do
+        def greet(name) do
+          IO.puts("Hello, \#{name}!")
+        end
       end
-    end
-    """
+      """
+      |> String.trim()
   }
 ]
 

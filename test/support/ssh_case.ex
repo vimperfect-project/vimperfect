@@ -70,7 +70,7 @@ defmodule Vimperfect.SshCase do
   - `user` - The user to connect as. Defaults to `"test"`.
   - `auth_methods` - The authentication methods to use. Defaults to `"publickey"`.
   - `with_shell` - Whether to open a shell after connecting. Defaults to `true`.
-  - `skip_pty_init_sequence` - If the shell is open, `ssh_conn/1` will automatically send the PTY request and if this option is set to `true` it will skip the PTY init sequence.
+  - `with_pty_init_sequence` - If the shell is open, `ssh_conn/1` will automatically send the PTY request and if this option is set to `true` it will skip the PTY init sequence.
     It will skip `:smcup`, `:smkx` and `:civis` key codes. Defaults to true. More on that in docs for `Vimperfect.Playground.Ssh.TermInfo`.
   """
   @type ssh_opts :: [
@@ -79,7 +79,7 @@ defmodule Vimperfect.SshCase do
           keys_dir: String.t(),
           auth_methods: String.t(),
           with_shell: boolean(),
-          skip_pty_init_sequence: boolean()
+          with_pty_init_sequence: boolean()
         ]
 
   @doc """
@@ -93,7 +93,7 @@ defmodule Vimperfect.SshCase do
   def ssh_conn(opts) do
     user_dir = File.cwd!() |> Path.join(Keyword.fetch!(opts, :keys_dir))
 
-    connect_res =
+    {:ok, conn, chan} =
       SSHClient.connect(
         ip: Keyword.get(opts, :ip, "127.0.0.1") |> to_charlist(),
         port:
@@ -103,24 +103,18 @@ defmodule Vimperfect.SshCase do
         auth_methods: Keyword.get(opts, :auth_methods, "publickey") |> to_charlist()
       )
 
-    case connect_res do
-      {:ok, conn, chan} ->
-        if Keyword.get(opts, :with_shell, true) do
-          :ok = SSHClient.request_pty(conn, chan)
-          :ok = SSHClient.request_shell(conn, chan)
+    if Keyword.get(opts, :with_shell, true) do
+      :ok = SSHClient.request_pty(conn, chan)
+      :ok = SSHClient.request_shell(conn, chan)
 
-          if Keyword.get(opts, :skip_pty_init_sequence, true) do
-            [:smcup, :smkx, :civis]
-            |> Enum.each(fn _ ->
-              {:ok, _} = SSHClient.collect_response(conn, chan)
-            end)
-          end
-        end
-
-        {conn, chan}
-
-      {:error, reason} ->
-        raise reason
+      if Keyword.get(opts, :with_pty_init_sequence, true) do
+        [:smcup, :smkx, :civis]
+        |> Enum.each(fn _ ->
+          {:ok, _} = SSHClient.collect_response(conn, chan)
+        end)
+      end
     end
+
+    {conn, chan}
   end
 end

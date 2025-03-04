@@ -83,8 +83,11 @@ defmodule SSHClient do
   Will run `collect_response/3` until the data is coming.
 
   Timeout specifies the maximum time to wait for new data to come.
+
+  Returns `{:ok, binary()}` in case if server did not close the connection, but no new data
+  came in the timeout timeframe, and if the connection is closed, it returns `{:closed, binary()}`
   """
-  @spec collect_all(pid(), integer(), timeout()) :: binary()
+  @spec collect_all(pid(), integer(), timeout()) :: {:ok, binary()} | {:closed, binary()}
   def collect_all(conn, chan, timeout \\ 50) do
     do_collect_all(conn, chan, timeout, "")
   end
@@ -95,19 +98,19 @@ defmodule SSHClient do
         do_collect_all(conn, chan, timeout, acc <> data)
 
       {:timeout, _} ->
-        acc
+        {:ok, acc}
 
       {:error, data} ->
-        acc <> data
+        {:ok, acc <> data}
 
       :eof ->
-        acc
+        {:ok, acc}
 
       :closed ->
         {:closed, acc}
 
       {:unknown, _} ->
-        acc
+        {:ok, acc}
     end
   end
 

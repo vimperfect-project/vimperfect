@@ -9,6 +9,8 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
 
   @keys_dir "test/priv/ssh/user"
   @ssh_user "test"
+  # Increased timeout to account for nvim startup
+  @editor_startup_timeout 1000
   @conn_settings [
     user: @ssh_user,
     auth_methods: "publickey",
@@ -68,7 +70,7 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     end
 
     test "sends proper PTY init sequence for xterm-256color" do
-      opts = Keyword.merge(@conn_settings, skip_pty_init_sequence: false)
+      opts = Keyword.merge(@conn_settings, with_pty_init_sequence: false)
       {conn, chan} = ssh_conn(opts)
       term_mod = Vimperfect.Playground.Ssh.TermInfo.Xterm256color
 
@@ -114,10 +116,10 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     setup :create_conn
 
     test "starts properly with valid client", %{puzzle: puzzle, conn: conn, chan: chan} do
-      data =
-        SSHClient.collect_all(conn, chan)
+      {:ok, data} =
+        SSHClient.collect_all(conn, chan, @editor_startup_timeout)
 
-      # Check that the editor properly starts the nvim instace
+      # Check that the editor starts properly the nvim instace with the right file contents
       puzzle.initial_content
       |> String.split("\n")
       |> Enum.each(fn line ->
@@ -125,14 +127,21 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
       end)
     end
 
-    test "properly passes with valid solution", %{conn: conn, chan: chan} do
+    test "properly passes with valid solution and does not store if quit without submit", %{
+      conn: conn,
+      chan: chan
+    } do
       # SKip the initial editor draw
-      _ = SSHClient.collect_all(conn, chan)
-      {:closed, resp} = SSHClient.send_keys(conn, chan, "jdd:wq\r")
+      {:ok, resp} = SSHClient.send_keys(conn, chan, "jdd:wq\r")
 
       assert resp =~ "Congratulations, your solution is correct!"
+
+      # Properly closes after quitting
+      {:closed, _} = SSHClient.send_keys(conn, chan, "q")
+      # TODO: Check nothing is stored
     end
 
+    # TODO: properly stores the solution if submitted
     # TODO: Properly handles invalid solution and puzzle restart (try first invalid then valid)
   end
 end

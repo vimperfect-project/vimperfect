@@ -17,7 +17,7 @@ defmodule VimperfectWeb.CoreComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import VimperfectWeb.Gettext
+  use Gettext, backend: VimperfectWeb.Gettext
 
   @doc """
   Renders a modal.

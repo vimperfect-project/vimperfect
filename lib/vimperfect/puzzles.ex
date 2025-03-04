@@ -5,7 +5,6 @@ defmodule Vimperfect.Puzzles do
 
   import Ecto.Query, warn: false
   require Logger
-  alias Hex.Solver
   alias Vimperfect.Puzzles.Solution
   alias Vimperfect.Puzzles.OriginalSolution
   alias Vimperfect.Repo

@@ -43,7 +43,7 @@ defmodule VimperfectWeb do
         layouts: [html: VimperfectWeb.Layouts]
 
       import Plug.Conn
-      import VimperfectWeb.Gettext
+      use Gettext, backend: VimperfectWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -85,7 +85,7 @@ defmodule VimperfectWeb do
       import Phoenix.HTML
       # Core UI components and translation
       import VimperfectWeb.CoreComponents
-      import VimperfectWeb.Gettext
+      use Gettext, backend: VimperfectWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

@@ -13,15 +13,9 @@
         @{@user.username}
       </a>
 
-      <%= if @user != nil do %>
-        <a href="/auth/signout" class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80">
-          Sign out
-        </a>
-      <% else %>
-        <a href="/auth/github" class="rounded-lg bg-zinc-100 px-2 py-1 hover:bg-zinc-200/80">
-          Sign in with GitHub
-        </a>
-      <% end %>
+      <.link href="/auth/signout" class="btn">
+        Sign out
+      </.link>
     </div>
   </div>
 </header>

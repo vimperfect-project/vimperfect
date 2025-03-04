@@ -52,6 +52,10 @@ defmodule Vimperfect.Accounts do
     Repo.get(User, id)
   end
 
+  def get_user!(id) do
+    Repo.get!(User, id)
+  end
+
   @doc """
   Gets a user by public key
 

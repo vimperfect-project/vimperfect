@@ -1,0 +1,33 @@
+<.flash_group flash={@flash} />
+<div>
+  Welcome to Vimperfect, {@user.username}
+  <br />
+
+  <.link navigate={~p"/profile"} class="btn">
+    Go to profile settings
+  </.link>
+  <br />
+  <br />
+
+  <h1 class="text-3xl mb-4">Available puzzles</h1>
+
+  <ul class="list bg-base-100 rounded-box shadow-md">
+    <%= for puzzle <- @puzzles do %>
+      <li class="list-row">
+        <div>
+          <img
+            class="size-10 rounded-box"
+            src="https://img.daisyui.com/images/profile/demo/1@94.webp"
+          />
+        </div>
+        <div>
+          <div>{puzzle.name}</div>
+          <div class="text-xs font-semibold opacity-60">{puzzle.description}</div>
+        </div>
+        <.link navigate={~p"/puzzle/#{puzzle}"} class="btn btn-square btn-ghost">
+          <.icon name="hero-chevron-right-solid" class="w-4 h-4" />
+        </.link>
+      </li>
+    <% end %>
+  </ul>
+</div>

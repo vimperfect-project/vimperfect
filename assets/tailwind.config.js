@@ -4,6 +4,7 @@
 const plugin = require("tailwindcss/plugin")
 const fs = require("fs")
 const path = require("path")
+const daisyui = require("daisyui")
 
 module.exports = {
   content: [
@@ -11,15 +12,12 @@ module.exports = {
     "../lib/vimperfect_web.ex",
     "../lib/vimperfect_web/**/*.*ex"
   ],
-  theme: {
-    extend: {
-      colors: {
-        brand: "#FD4F00",
-      }
-    },
-  },
   plugins: [
-    require("@tailwindcss/forms"),
+    daisyui({
+      logs: false,
+      themes: ["cupcake --default", "dim --prefersdark"],
+    }),
+    // require("@tailwindcss/forms"),
     // Allows prefixing tailwind classes with LiveView classes to add rules
     // only when LiveView classes are applied, for example:
     //

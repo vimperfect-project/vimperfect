@@ -31,7 +31,7 @@ defmodule VimperfectWeb.Router do
   scope "/", VimperfectWeb do
     pipe_through [:browser]
 
-    get "/", PageController, :home
+    live "/", IndexLive.Index, :index
   end
 
   # Authorized routes
@@ -39,6 +39,7 @@ defmodule VimperfectWeb.Router do
     pipe_through [:browser, :auth]
 
     live "/profile", ProfileLive.Index, :index
+    live "/home", HomeLive.Index, :index
 
     get "/puzzle/:slug", PuzzleController, :show
   end

@@ -125,13 +125,18 @@ defmodule SSHClient do
       |> Enum.map(fn key ->
         send(conn, chan, key)
 
-        collect_all(conn, chan)
+        collect_all(conn, chan, Keyword.get(opts, :timeout, 50))
       end)
 
+    {status, last_res} = List.last(out)
+
     if Keyword.get(opts, :all_feedback, false) do
-      Enum.join(out, "")
+      {status,
+       out
+       |> Enum.map(&elem(&1, 1))
+       |> Enum.join("")}
     else
-      List.last(out)
+      {status, last_res}
     end
   end
 

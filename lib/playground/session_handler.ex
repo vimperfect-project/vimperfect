@@ -142,7 +142,7 @@ defmodule Vimperfect.Playground.SessionHandler do
         Vimperfect.Keystrokes.convert_keystrokes(keystrokes)
         |> Vimperfect.Keystrokes.strip_exit_sequence()
 
-      existing = Vimperfect.Puzzles.get_solution_by_keystrokes(state.user, puzzle, solution)
+      existing = Vimperfect.Puzzles.get_user_solution_by_keystrokes(state.user, puzzle, solution)
 
       SessionContext.set_field(ctx.conn, :last_solution, {solution, score})
 

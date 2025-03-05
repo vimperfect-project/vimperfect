@@ -38,7 +38,7 @@ defmodule Vimperfect.Puzzles do
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_puzzle_by_slug!(integer()) :: Puzzle.t()
+  @spec get_puzzle_by_slug!(integer()) :: Puzzle
   def get_puzzle_by_slug!(slug), do: Repo.get_by!(Puzzle, slug: slug)
 
   @doc """
@@ -52,7 +52,7 @@ defmodule Vimperfect.Puzzles do
       iex> get_puzzle!(456)
       nil
   """
-  @spec get_puzzle_by_slug(String.t()) :: Puzzle.t() | nil
+  @spec get_puzzle_by_slug(String.t()) :: Puzzle | nil
   def get_puzzle_by_slug(slug), do: Repo.get_by(Puzzle, slug: slug)
 
   @doc """
@@ -60,11 +60,11 @@ defmodule Vimperfect.Puzzles do
   """
   @spec submit_solution!(
           {solution :: binary(), score :: integer()},
-          user :: Vimperfect.Accounts.User.t(),
-          puzzle :: Puzzle.t()
-        ) :: Solution.t() | :ignored
+          user :: Vimperfect.Accounts.User,
+          puzzle :: Puzzle
+        ) :: Solution | :ignored
   def submit_solution!({solution, score}, user, puzzle) do
-    existing = get_solution_by_keystrokes(user, puzzle, solution)
+    existing = get_user_solution_by_keystrokes(user, puzzle, solution)
 
     if existing == nil do
       original_solution = get_or_create_original_solution(solution, score, user, puzzle)
@@ -99,7 +99,11 @@ defmodule Vimperfect.Puzzles do
     end
   end
 
-  def get_solution_by_keystrokes(user, puzzle, keystrokes) do
+  @doc """
+  Gets user solution for a puzzle by keystrokes
+  """
+  @spec get_user_solution_by_keystrokes(User, Puzzle, String.t()) :: Solution | term() | nil
+  def get_user_solution_by_keystrokes(user, puzzle, keystrokes) do
     query =
       from s in Solution,
         join: os in OriginalSolution,
@@ -110,7 +114,15 @@ defmodule Vimperfect.Puzzles do
     Repo.one(query)
   end
 
-  defp get_original_solution_by_keystrokes(puzzle, keystrokes) do
-    Repo.get_by(OriginalSolution, keystrokes: keystrokes, puzzle_id: puzzle.id)
+  @doc """
+  Gets original solution by keystrokes
+  """
+  @spec get_original_solution_by_keystrokes(Puzzle, String.t()) :: OriginalSolution | nil
+  def get_original_solution_by_keystrokes(puzzle, keystrokes) do
+    query =
+      from os in OriginalSolution,
+        where: os.keystrokes == ^keystrokes and os.puzzle_id == ^puzzle.id
+
+    Repo.one(query)
   end
 end

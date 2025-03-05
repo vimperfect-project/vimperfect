@@ -11,6 +11,7 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
   @ssh_user "test"
   # Increased timeout to account for nvim startup
   @editor_startup_timeout 1000
+
   @conn_settings [
     user: @ssh_user,
     auth_methods: "publickey",
@@ -47,6 +48,15 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     end)
 
     %{conn: conn, chan: chan}
+  end
+
+  # Checks if the ssh output contains the puzzle initial content line by line
+  def assert_proper_puzzle_draw(puzzle, output) do
+    puzzle.initial_content
+    |> String.split("\n")
+    |> Enum.each(fn line ->
+      assert output =~ line
+    end)
   end
 
   describe "Playground with invalid key / connection" do
@@ -110,7 +120,7 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
     end
   end
 
-  describe "Solving a puzzle" do
+  describe "Valid solutions" do
     setup :create_user_with_test_public_key
     setup :create_puzzle
     setup :create_conn
@@ -119,29 +129,94 @@ defmodule Vimperfect.Playground.SessionHandlerTest do
       {:ok, data} =
         SSHClient.collect_all(conn, chan, @editor_startup_timeout)
 
-      # Check that the editor starts properly the nvim instace with the right file contents
-      puzzle.initial_content
-      |> String.split("\n")
-      |> Enum.each(fn line ->
-        assert data =~ line
-      end)
+      assert_proper_puzzle_draw(puzzle, data)
     end
 
     test "properly passes with valid solution and does not store if quit without submit", %{
       conn: conn,
-      chan: chan
+      chan: chan,
+      puzzle: puzzle
     } do
+      keystrokes = "jdd:wq"
       # SKip the initial editor draw
-      {:ok, resp} = SSHClient.send_keys(conn, chan, "jdd:wq\r")
+      {:ok, resp} = SSHClient.send_keys(conn, chan, "#{keystrokes}\r")
 
       assert resp =~ "Congratulations, your solution is correct!"
 
       # Properly closes after quitting
       {:closed, _} = SSHClient.send_keys(conn, chan, "q")
-      # TODO: Check nothing is stored
+      solution = Vimperfect.Puzzles.get_original_solution_by_keystrokes(puzzle, keystrokes)
+      assert solution == nil
     end
 
-    # TODO: properly stores the solution if submitted
-    # TODO: Properly handles invalid solution and puzzle restart (try first invalid then valid)
+    test "properly submits solutions", %{
+      conn: conn,
+      chan: chan,
+      user: user,
+      puzzle: puzzle
+    } do
+      keystrokes = "jdd"
+      exit_seq = ":wq\r"
+      # SKip the initial editor draw
+      {:ok, resp} = SSHClient.send_keys(conn, chan, "#{keystrokes}#{exit_seq}")
+
+      assert resp =~ "Congratulations, your solution is correct!"
+
+      # Properly closes after quitting
+      {:closed, _} = SSHClient.send_keys(conn, chan, "s")
+      solution = Vimperfect.Puzzles.get_original_solution_by_keystrokes(puzzle, keystrokes)
+      assert solution != nil
+      assert solution.user_id == user.id
+      assert solution.score == 3
+    end
+  end
+
+  describe "Invalid solutions" do
+    setup :create_user_with_test_public_key
+    setup :create_puzzle
+    setup :create_conn
+
+    test "saves nothing on quit", %{
+      conn: conn,
+      chan: chan,
+      puzzle: puzzle
+    } do
+      keystrokes = "j"
+      # SKip the initial editor draw
+      {:ok, resp} = SSHClient.send_keys(conn, chan, "#{keystrokes}:wq\r")
+
+      assert resp =~ "Sorry, your solution is incorrect"
+
+      # Properly closes after quitting
+      {:closed, _} = SSHClient.send_keys(conn, chan, "q")
+      solution = Vimperfect.Puzzles.get_original_solution_by_keystrokes(puzzle, keystrokes)
+      assert solution == nil
+    end
+
+    test "properly restarts the puzzle", %{
+      conn: conn,
+      chan: chan,
+      puzzle: puzzle
+    } do
+      keystrokes = "j"
+      # SKip the initial editor draw
+      {:ok, resp} = SSHClient.send_keys(conn, chan, "#{keystrokes}:wq\r")
+
+      assert resp =~ "Sorry, your solution is incorrect"
+
+      # Properly closes after quitting
+      {:ok, resp} =
+        SSHClient.send_keys(conn, chan, "r", all_feedback: true, timeout: @editor_startup_timeout)
+
+      assert_proper_puzzle_draw(puzzle, resp)
+
+      {:ok, resp} = SSHClient.send_keys(conn, chan, ":wq\r")
+      assert resp =~ "Sorry, your solution is incorrect"
+
+      {:closed, _} = SSHClient.send_keys(conn, chan, "q")
+
+      solution = Vimperfect.Puzzles.get_original_solution_by_keystrokes(puzzle, keystrokes)
+      assert solution == nil
+    end
   end
 end

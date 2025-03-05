@@ -37,7 +37,7 @@ defmodule VimperfectWeb.ProfileLiveTest do
 
       {:ok, _index_live, html} = live(conn, ~p"/profile")
 
-      assert html =~ "Key 1"
+      assert html =~ "Key name"
     end
 
     test "saves a valid public key", %{conn: conn} do

@@ -2,16 +2,16 @@
   <.back navigate={~p"/"}>Back</.back>
   <h1 class="text-3xl mb-4">Profile settings</h1>
 
-  <span>Enter new public key</span>
   <.form id="public-key-form" for={@public_key_form} phx-submit="add-pk">
     <.input
-      type="text"
+      type="textarea"
       placeholder="Starts with ssh-rsa, ssh-ed25519... "
+      legend="Enter new public key"
+      label="The part containing your username will be removed"
       field={@public_key_form[:key]}
     />
-    <span>Note: the part containing your username will be removed.</span>
-    <br />
-    <.button>Save</.button>
+
+    <.button type="submit">Add</.button>
   </.form>
 
   <h2 class="text-xl mt-10">Public keys</h2>
@@ -20,16 +20,20 @@
     <p>No public keys added yet.</p>
   <% end %>
 
-  <%= for {key, index} <- @user.public_keys |> Enum.with_index() do %>
-    <div class="flex items-center gap-3">
-      <span>Key {index + 1} ************</span>
-      <.button
-        phx-click="remove-pk"
-        phx-value-public_key_id={key.id}
-        phx-disable-with="Resetting..."
-      >
-        Remove
-      </.button>
-    </div>
-  <% end %>
+  <ul class="list bg-base-100 rounded-box shadow-md">
+    <%= for {key, index} <- @user.public_keys |> Enum.with_index() do %>
+      <li class="list-row">
+        <div class="text-4xl font-thin opacity-30 tabular-nums">{index + 1}</div>
+        <div class="list-col-grow">
+          <%!-- TODO: Add proper key names --%>
+          <div>Key name</div>
+          <%!-- Normal date here --%>
+          <div class="text-xs uppercase font-semibold opacity-60">Added on {key.inserted_at}</div>
+        </div>
+        <.button phx-click="remove-pk" phx-value-public_key_id={key.id} phx-disable-with>
+          <.icon name="hero-x-mark-solid" class="w-4 h-4" />
+        </.button>
+      </li>
+    <% end %>
+  </ul>
 </div>

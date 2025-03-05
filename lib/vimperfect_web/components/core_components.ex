@@ -101,6 +101,7 @@ defmodule VimperfectWeb.CoreComponents do
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
   attr :title, :string, default: nil
   attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
+  attr :hidden, :boolean, default: false, doc: "used for styling and flash lookup"
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, doc: "the optional inner block that renders the flash message"
@@ -115,21 +116,22 @@ defmodule VimperfectWeb.CoreComponents do
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[
-        "fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        "alert alert-soft",
+        @hidden == true && "hidden",
+        @kind == :info && "alert-info bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
+        @kind == :error &&
+          "alert-error bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
       ]}
       {@rest}
     >
       <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
         <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
         <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
-        {@title}
       </p>
-      <p class="mt-2 text-sm leading-5">{msg}</p>
-      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
-      </button>
+      <div>
+        <h3 class="font-bold">{@title}</h3>
+        <div class="text-xs">{msg}</div>
+      </div>
     </div>
     """
   end
@@ -146,15 +148,15 @@ defmodule VimperfectWeb.CoreComponents do
 
   def flash_group(assigns) do
     ~H"""
-    <div id={@id}>
+    <div class="toast" id={@id}>
       <.flash kind={:info} title={gettext("Success!")} flash={@flash} />
       <.flash kind={:error} title={gettext("Error!")} flash={@flash} />
       <.flash
         id="client-error"
         kind={:error}
         title={gettext("We can't find the internet")}
-        phx-disconnected={show(".phx-client-error #client-error")}
-        phx-connected={hide("#client-error")}
+        phx-disconnected={JS.remove_class("hidden", to: "#client-error")}
+        phx-connected={JS.add_class("hidden", to: "#client-error")}
         hidden
       >
         {gettext("Attempting to reconnect")}
@@ -165,8 +167,8 @@ defmodule VimperfectWeb.CoreComponents do
         id="server-error"
         kind={:error}
         title={gettext("Something went wrong!")}
-        phx-disconnected={show(".phx-server-error #server-error")}
-        phx-connected={hide("#server-error")}
+        phx-disconnected={JS.remove_class("hidden", to: "#server-error")}
+        phx-connected={JS.add_class("hidden", to: "#server-error")}
         hidden
       >
         {gettext("Hang in there while we get back on track")}
@@ -271,6 +273,7 @@ defmodule VimperfectWeb.CoreComponents do
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
+  attr :legend, :string, default: nil
   attr :value, :any
 
   attr :type, :string,
@@ -330,7 +333,7 @@ defmodule VimperfectWeb.CoreComponents do
 
   def input(%{type: "select"} = assigns) do
     ~H"""
-    <div>
+    <fieldset class="fieldset">
       <.label for={@id}>{@label}</.label>
       <select
         id={@id}
@@ -343,26 +346,31 @@ defmodule VimperfectWeb.CoreComponents do
         {Phoenix.HTML.Form.options_for_select(@options, @value)}
       </select>
       <.error :for={msg <- @errors}>{msg}</.error>
-    </div>
+    </fieldset>
     """
   end
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <div>
-      <.label for={@id}>{@label}</.label>
+    <fieldset class="fieldset">
+      <.legend :if={@legend} for={@id}>{@legend}</.legend>
       <textarea
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 min-h-[6rem]",
+          "textarea w-full",
           @errors == [] && "border-zinc-300 focus:border-zinc-400",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
         {@rest}
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
-      <.error :for={msg <- @errors}>{msg}</.error>
-    </div>
+
+      <%= if @errors != [] do %>
+        <.error :for={msg <- @errors}>{msg}</.error>
+      <% else %>
+        <.label :if={@label} for={@id}>{@label}</.label>
+      <% end %>
+    </fieldset>
     """
   end
 
@@ -377,7 +385,7 @@ defmodule VimperfectWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
+          "input",
           @errors == [] && "border-zinc-300 focus:border-zinc-400",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
@@ -396,9 +404,23 @@ defmodule VimperfectWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="fieldset-label">
       {render_slot(@inner_block)}
     </label>
+    """
+  end
+
+  @doc """
+  Renders a fieldset legend.
+  """
+  attr :for, :string, default: nil
+  slot :inner_block, required: true
+
+  def legend(assigns) do
+    ~H"""
+    <legend for={@for} class="fieldset-legend">
+      {render_slot(@inner_block)}
+    </legend>
     """
   end
 

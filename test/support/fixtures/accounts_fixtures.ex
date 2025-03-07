@@ -33,6 +33,7 @@ defmodule Vimperfect.AccountsFixtures do
     {:ok, user} =
       Vimperfect.Accounts.add_public_key(
         user,
+        "test key",
         public_key
       )
 

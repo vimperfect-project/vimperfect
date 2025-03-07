@@ -1,39 +1,46 @@
-<div>
-  <.back navigate={~p"/"}>Back</.back>
-  <h1 class="text-3xl mb-4">Profile settings</h1>
+<.back navigate={~p"/"}>{gettext("Back")}</.back>
+<h1 class="text-3xl mb-4">{gettext("Profile settings")}</h1>
 
-  <.form id="public-key-form" for={@public_key_form} phx-submit="add-pk">
-    <.input
-      type="textarea"
-      placeholder="Starts with ssh-rsa, ssh-ed25519... "
-      legend="Enter new public key"
-      label="The part containing your username will be removed"
-      field={@public_key_form[:key]}
-    />
+<.form id="public-key-form" for={@public_key_form} phx-submit="add-pk">
+  <.input
+    type="text"
+    placeholder={gettext("Your key name")}
+    legend={gettext("Public key name")}
+    field={@public_key_form[:name]}
+  />
+  <.input
+    type="textarea"
+    placeholder={gettext("Starts with ssh-rsa, ssh-ed25519... ")}
+    legend={gettext("Public key")}
+    label={gettext("The part containing your username will be removed")}
+    field={@public_key_form[:key]}
+  />
 
-    <.button type="submit">Add</.button>
-  </.form>
+  <div>
+    <.button type="submit">{gettext("Add")}</.button>
+  </div>
+</.form>
 
-  <h2 class="text-xl mt-10">Public keys</h2>
+<h2 class="text-xl mt-10">{gettext("Your public keys")}</h2>
 
-  <%= if Enum.count(@user.public_keys) == 0  do %>
-    <p>No public keys added yet.</p>
-  <% end %>
+<%= if Enum.count(@user.public_keys) == 0  do %>
+  <p>{gettext("No public keys added yet.")}</p>
+<% end %>
 
-  <ul class="list bg-base-100 rounded-box shadow-md">
-    <%= for {key, index} <- @user.public_keys |> Enum.with_index() do %>
-      <li class="list-row">
-        <div class="text-4xl font-thin opacity-30 tabular-nums">{index + 1}</div>
-        <div class="list-col-grow">
-          <%!-- TODO: Add proper key names --%>
-          <div>Key name</div>
-          <%!-- Normal date here --%>
-          <div class="text-xs uppercase font-semibold opacity-60">Added on {key.inserted_at}</div>
+<ul class="list bg-base-100 rounded-box shadow-md">
+  <%= for {key, index} <- @user.public_keys |> Enum.with_index() do %>
+    <li class="list-row">
+      <div class="text-4xl font-thin opacity-30 tabular-nums">{index + 1}</div>
+      <div class="list-col-grow">
+        <div>{key.name}</div>
+        <div class="text-xs uppercase font-semibold opacity-60">
+          {gettext("Added on")} {key.inserted_at}
         </div>
-        <.button phx-click="remove-pk" phx-value-public_key_id={key.id} phx-disable-with>
-          <.icon name="hero-x-mark-solid" class="w-4 h-4" />
-        </.button>
-      </li>
-    <% end %>
-  </ul>
-</div>
+      </div>
+      <p class="list-col-wrap text-xs">{key.key}</p>
+      <.button phx-click="remove-pk" phx-value-public_key_id={key.id} phx-disable-with>
+        <.icon name="hero-x-mark-solid" class="w-4 h-4" />
+      </.button>
+    </li>
+  <% end %>
+</ul>

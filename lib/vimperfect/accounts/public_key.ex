@@ -7,7 +7,8 @@ defmodule Vimperfect.Accounts.PublicKey do
   import Ecto.Changeset
 
   schema "public_keys" do
-    field :key, :string, redact: true
+    field :key, :string
+    field :name, :string
 
     belongs_to :user, Vimperfect.Accounts.User
 
@@ -17,8 +18,8 @@ defmodule Vimperfect.Accounts.PublicKey do
   @doc false
   def changeset(public_key, attrs) do
     public_key
-    |> cast(attrs, [:key, :user_id])
-    |> validate_required([:key, :user_id])
+    |> cast(attrs, [:name, :key, :user_id])
+    |> validate_required([:name, :key, :user_id])
     |> assoc_constraint(:user)
     |> validate_change(:key, fn :key, key ->
       if Vimperfect.Util.valid_openssh_public_key?(key) do
@@ -27,6 +28,9 @@ defmodule Vimperfect.Accounts.PublicKey do
         [key: "not a valid public key"]
       end
     end)
+    |> unique_constraint([:name, :user_id],
+      message: "you already have a key named this way"
+    )
     |> unique_constraint(:key,
       message: "this key is already used"
     )

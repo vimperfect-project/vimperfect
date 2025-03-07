@@ -17,11 +17,11 @@ user =
     email: "test@test.com"
   })
 
-public_key =
-  Vimperfect.Repo.insert!(%Vimperfect.Accounts.PublicKey{
-    user_id: user.id,
-    key: "totally-fake-key"
-  })
+Vimperfect.Repo.insert!(%Vimperfect.Accounts.PublicKey{
+  user_id: user.id,
+  name: "My beloved key",
+  key: "totally-fake-key"
+})
 
 puzzles = [
   %Vimperfect.Puzzles.Puzzle{

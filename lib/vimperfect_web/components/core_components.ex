@@ -352,7 +352,7 @@ defmodule VimperfectWeb.CoreComponents do
 
   def input(%{type: "textarea"} = assigns) do
     ~H"""
-    <fieldset class="fieldset">
+    <fieldset class="fieldset w-full">
       <.legend :if={@legend} for={@id}>{@legend}</.legend>
       <textarea
         id={@id}
@@ -366,7 +366,8 @@ defmodule VimperfectWeb.CoreComponents do
       ><%= Phoenix.HTML.Form.normalize_value("textarea", @value) %></textarea>
 
       <%= if @errors != [] do %>
-        <.error :for={msg <- @errors}>{msg}</.error>
+        <.error :for={msg <- @errors} for={@id}>{msg}</.error>
+        <%!-- <.label :if={@label} for={@id}>{@label}</.label> --%>
       <% else %>
         <.label :if={@label} for={@id}>{@label}</.label>
       <% end %>
@@ -377,8 +378,8 @@ defmodule VimperfectWeb.CoreComponents do
   # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
-    <div>
-      <.label for={@id}>{@label}</.label>
+    <fieldset class="fieldset w-full">
+      <.legend :if={@legend} for={@id}>{@legend}</.legend>
       <input
         type={@type}
         name={@name}
@@ -391,8 +392,14 @@ defmodule VimperfectWeb.CoreComponents do
         ]}
         {@rest}
       />
-      <.error :for={msg <- @errors}>{msg}</.error>
-    </div>
+
+      <%= if @errors != [] do %>
+        <.error :for={msg <- @errors} for={@id}>{msg}</.error>
+        <%!-- <.label :if={@label} for={@id}>{@label}</.label> --%>
+      <% else %>
+        <.label :if={@label} for={@id}>{@label}</.label>
+      <% end %>
+    </fieldset>
     """
   end
 
@@ -427,14 +434,15 @@ defmodule VimperfectWeb.CoreComponents do
   @doc """
   Generates a generic error message.
   """
+  attr :for, :string, default: nil
   slot :inner_block, required: true
 
   def error(assigns) do
     ~H"""
-    <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600">
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+    <label for={@for} class="text-rose-600 label">
+      <.icon name="hero-exclamation-circle-mini" />
       {render_slot(@inner_block)}
-    </p>
+    </label>
     """
   end
 

@@ -107,3 +107,12 @@ msgstr ""
 
 msgid "must be equal to %{number}"
 msgstr ""
+
+msgid "not a valid public key"
+msgstr ""
+
+msgid "this key is already used"
+msgstr ""
+
+msgid "you already have a key named this way"
+msgstr ""

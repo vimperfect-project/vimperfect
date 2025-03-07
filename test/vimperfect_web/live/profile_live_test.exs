@@ -5,13 +5,16 @@ defmodule VimperfectWeb.ProfileLiveTest do
   import Vimperfect.AccountsFixtures
 
   @create_attrs %{
+    name: "testcase key",
     key:
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINyizBzsyvs5KYsyKdTgcpbw52tpEPmfl1q3m9VD5+V7 user@vimperfect"
   }
   @invalid_attrs %{
+    name: "test",
     key: "I'm not an expert but this is not an ssh key"
   }
   @empty_attrs %{
+    name: "",
     key: ""
   }
 
@@ -37,7 +40,7 @@ defmodule VimperfectWeb.ProfileLiveTest do
 
       {:ok, _index_live, html} = live(conn, ~p"/profile")
 
-      assert html =~ "Key name"
+      assert html =~ "test key"
     end
 
     test "saves a valid public key", %{conn: conn} do
@@ -59,12 +62,26 @@ defmodule VimperfectWeb.ProfileLiveTest do
       {:ok, index_live, _html} = live(conn, ~p"/profile")
 
       assert index_live
-             |> form("#public-key-form", public_key: %{key: public_key.key})
+             |> form("#public-key-form", public_key: %{key: public_key.key, name: "Key 2"})
              |> render_submit()
 
       html = render(index_live)
-      assert String.contains?(html, "Key 2") == false
       assert html =~ "this key is already used"
+    end
+
+    test "does not allow to create a key with the same name", %{conn: conn, user: user} do
+      public_key = add_public_key_fixture(user).public_keys |> List.first()
+
+      {:ok, index_live, _html} = live(conn, ~p"/profile")
+
+      assert index_live
+             |> form("#public-key-form",
+               public_key: %{key: @create_attrs.key, name: public_key.name}
+             )
+             |> render_submit()
+
+      html = render(index_live)
+      assert html =~ "you already have a key named this way"
     end
 
     test "validates invalid public key", %{conn: conn} do

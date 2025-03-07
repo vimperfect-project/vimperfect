@@ -25,7 +25,7 @@ defmodule Vimperfect.Accounts do
       true
 
   """
-  @spec find_or_create_user(user_attrs()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  @spec find_or_create_user(user_attrs()) :: {:ok, User} | {:error, Ecto.Changeset.t()}
   def find_or_create_user(attrs) do
     case get_by_username_and_provider(attrs.username, attrs.provider) do
       nil ->
@@ -41,7 +41,7 @@ defmodule Vimperfect.Accounts do
   @doc """
   Updates a user, raises if attrs are invalid.
   """
-  @spec update_user(User.t(), user_attrs()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  @spec update_user(User, user_attrs()) :: {:ok, User} | {:error, Ecto.Changeset.t()}
   def update_user(user, attrs) do
     user
     |> User.changeset(attrs)
@@ -66,7 +66,7 @@ defmodule Vimperfect.Accounts do
     iex> Accounts.get_user_by_public_key("ssh-rsa does not exist")
     nil
   """
-  @spec get_user_by_public_key(String.t()) :: User.t() | nil
+  @spec get_user_by_public_key(String.t()) :: User | nil
   def get_user_by_public_key(public_key) do
     query =
       from u in User, join: p in PublicKey, on: u.id == p.user_id, where: p.key == ^public_key
@@ -96,13 +96,13 @@ defmodule Vimperfect.Accounts do
       iex> Accounts.add_public_key(%User{}, "non-key")
       {:error, %Ecto.Changeset{}}
   """
-  @spec add_public_key(User.t(), String.t()) :: {:ok, User.t()} | {:error, Ecto.Changeset.t()}
-  def add_public_key(%User{} = user, public_key) do
+  @spec add_public_key(User, String.t(), String.t()) :: {:ok, User} | {:error, Ecto.Changeset.t()}
+  def add_public_key(%User{} = user, name, public_key) do
     public_key =
       Vimperfect.Util.strip_openssh_public_key_comment(public_key)
 
     insert_res =
-      PublicKey.changeset(%PublicKey{}, %{user_id: user.id, key: public_key})
+      PublicKey.changeset(%PublicKey{}, %{user_id: user.id, name: name, key: public_key})
       |> Repo.insert()
 
     case insert_res do

@@ -9,7 +9,8 @@ defmodule VimperfectWeb.Plugs.EnsureAuth do
   def call(conn, _opts) do
     if conn.assigns[:user] == nil do
       conn
-      |> redirect(to: path(conn, PageController, ~p"/"))
+      |> clear_session()
+      |> redirect(to: path(conn, VimperfectWeb.Router, ~p"/"))
       |> halt()
     else
       conn

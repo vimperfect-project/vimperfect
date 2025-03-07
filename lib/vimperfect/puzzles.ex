@@ -125,4 +125,103 @@ defmodule Vimperfect.Puzzles do
 
     Repo.one(query)
   end
+
+  @doc """
+  Takes an abritrary puzzle name string and converts it to a url-friendly slug
+
+  ## Examples
+      iex> get_puzzle_slug("Hello, World!")
+      "hello-world"
+  """
+  def get_puzzle_slug(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^\w\s-]/, "")
+    |> String.replace(~r/\s+/, "-")
+    |> String.trim("-")
+  end
+
+  @doc "Checks if the given slug is valid"
+  def valid_slug?(slug) do
+    get_puzzle_slug(slug) == slug
+  end
+
+  @doc """
+  Gets a single puzzle.
+
+  Raises if the Puzzle does not exist.
+
+  ## Examples
+
+      iex> get_puzzle!(123)
+      %Puzzle{}
+
+  """
+  def get_puzzle!(id) do
+    Repo.get!(Puzzle, id)
+  end
+
+  @doc """
+  Creates a puzzle.
+
+  ## Examples
+
+      iex> create_puzzle(%{field: value})
+      {:ok, %Puzzle{}}
+
+      iex> create_puzzle(%{field: bad_value})
+      {:error, ...}
+
+  """
+  def create_puzzle(author_id, attrs \\ %{}) do
+    %Puzzle{author_id: author_id}
+    |> change_puzzle(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a puzzle.
+
+  ## Examples
+
+      iex> update_puzzle(puzzle, %{field: new_value})
+      {:ok, %Puzzle{}}
+
+      iex> update_puzzle(puzzle, %{field: bad_value})
+      {:error, ...}
+
+  """
+  def update_puzzle(%Puzzle{} = puzzle, attrs) do
+    raise "TODO"
+  end
+
+  @doc """
+  Deletes a Puzzle.
+
+  ## Examples
+
+      iex> delete_puzzle(puzzle)
+      {:ok, %Puzzle{}}
+
+      iex> delete_puzzle(puzzle)
+      {:error, ...}
+
+  """
+  def delete_puzzle(%Puzzle{} = puzzle) do
+    raise "TODO"
+  end
+
+  @doc """
+  Returns a data structure for tracking puzzle changes.
+
+  ## Examples
+
+      iex> change_puzzle(puzzle)
+      %Todo{...}
+
+  """
+  def change_puzzle(%Puzzle{} = puzzle, attrs \\ %{}) do
+    puzzle
+    |> Puzzle.changeset(attrs)
+  end
 end

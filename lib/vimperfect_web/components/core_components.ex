@@ -367,7 +367,6 @@ defmodule VimperfectWeb.CoreComponents do
 
       <%= if @errors != [] do %>
         <.error :for={msg <- @errors} for={@id}>{msg}</.error>
-        <%!-- <.label :if={@label} for={@id}>{@label}</.label> --%>
       <% else %>
         <.label :if={@label} for={@id}>{@label}</.label>
       <% end %>

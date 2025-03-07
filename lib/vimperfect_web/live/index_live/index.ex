@@ -8,6 +8,7 @@ defmodule VimperfectWeb.IndexLive.Index do
     user_id = session["user_id"]
 
     if user_id != nil do
+      IO.inspect(user_id)
       {:ok, socket |> redirect(to: ~p"/home")}
     else
       {:ok, socket, layout: false}

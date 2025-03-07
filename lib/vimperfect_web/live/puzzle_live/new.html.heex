@@ -1,0 +1,62 @@
+<.form id="puzzle-form" for={@puzzle_form} phx-submit="save" phx-change="validate">
+  <.input
+    phx-debounce="700"
+    type="text"
+    placeholder={gettext("Enter puzzle name")}
+    legend={gettext("Puzzle name")}
+    label={gettext("Choose wisely")}
+    field={@puzzle_form[:name]}
+  />
+
+  <.input
+    type="text"
+    phx-debounce="blur"
+    phx-disable-with
+    phx-keydown="slug-changed"
+    placeholder={gettext("Enter puzzle slug")}
+    legend={gettext("Slug")}
+    label={gettext("Slug is used as used in URLs and SSH commands")}
+    field={@puzzle_form[:slug]}
+  />
+
+  <.input
+    type="textarea"
+    phx-debounce="blur"
+    placeholder={
+      gettext(
+        "Anything related to the puzzle: make your own story, give hints to how this puzzle could be solved"
+      )
+    }
+    legend={gettext("Description")}
+    field={@puzzle_form[:description]}
+  />
+
+  <.input
+    type="text"
+    phx-debounce="blur"
+    placeholder={gettext("Enter filename")}
+    legend={gettext("Filename")}
+    label={gettext("This filename will be shown to users inside of editor")}
+    field={@puzzle_form[:filename]}
+  />
+
+  <.input
+    type="textarea"
+    phx-debounce="blur"
+    placeholder={gettext("Paste your initial file contents")}
+    legend={gettext("Initial content")}
+    label={gettext("This is what players will be given when they choose to solve your puzzle")}
+    field={@puzzle_form[:initial_content]}
+  />
+
+  <.input
+    type="textarea"
+    phx-debounce="blur"
+    placeholder={gettext("Paste expected file contents")}
+    legend={gettext("Final content")}
+    label={gettext("This is what players should turn then initial content into")}
+    field={@puzzle_form[:expected_content]}
+  />
+
+  <.button type="submit">{gettext("Create puzzle")}</.button>
+</.form>

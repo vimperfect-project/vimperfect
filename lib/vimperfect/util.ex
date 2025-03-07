@@ -6,7 +6,7 @@ defmodule Vimperfect.Util do
   @sk_regex ~r/^sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t[0-9A-Za-z+\/]+[=]{0,3}$/
   @rsa_regex ~r/^ssh-rsa AAAAB3NzaC1yc2[0-9A-Za-z+\/]+[=]{0,3}$/
 
-  @filename_regex ~r/^[\w\-\.]+$/
+  @filename_regex ~r/^[^.\/][\w.-]*\.[a-zA-Z0-9]+$/
 
   @doc """
   Validates if the given public key is a valid OpenSSH public key. Important thing to note is that keys must not have a comment at the end.

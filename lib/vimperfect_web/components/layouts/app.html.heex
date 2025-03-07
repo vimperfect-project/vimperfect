@@ -13,6 +13,10 @@
         @{@user.username}
       </a>
 
+      <.link navigate={~p"/puzzles/new"} class="btn">
+        <.icon name="hero-plus" /> Create puzzle
+      </.link>
+
       <.link href="/auth/signout" class="btn">
         Sign out
       </.link>

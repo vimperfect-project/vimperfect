@@ -41,7 +41,9 @@ defmodule VimperfectWeb.Router do
     live "/profile", ProfileLive.Index, :index
     live "/home", HomeLive.Index, :index
 
-    get "/puzzle/:slug", PuzzleController, :show
+    live "/puzzles/new", PuzzleLive.New, :new
+
+    get "/puzzles/:slug", PuzzleController, :show
   end
 
   # Other scopes may use custom stacks.

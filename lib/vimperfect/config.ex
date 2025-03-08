@@ -2,19 +2,17 @@ defmodule Vimperfect.Config do
   import Config
 
   def config_runtime!() do
-    load_github_creds_file!()
+    load_github_creds!()
   end
 
-  def load_github_creds_file!() do
-    creds_file =
-      System.get_env("VIMPERFECT_GITHUB_CREDS_FILE") ||
-        raise """
-        environment variable VIMPERFECT_GITHUB_CREDS_FILE is not set, which is required for providing GitHub authentication
+  def load_github_creds!() do
+    client_id =
+      System.get_env("VIMPERFECT_GITHUB_CLIENT_ID") ||
+        raise "VIMPERFECT_GITHUB_CLIENT_ID is not set"
 
-        Note: if you're developing for Vimperfect, set this file to priv/secrets/github and separate your client id and secret with a newline
-        """
-
-    [client_id, client_secret] = File.read!(creds_file) |> String.split("\n", trim: true)
+    client_secret =
+      System.get_env("VIMPERFECT_GITHUB_CLIENT_SECRET") ||
+        raise "VIMPERFECT_GITHUB_CLIENT_SECRET is not set"
 
     config :ueberauth, Ueberauth.Strategy.Github.OAuth,
       client_id: client_id,

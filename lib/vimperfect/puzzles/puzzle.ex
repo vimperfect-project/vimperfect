@@ -6,9 +6,13 @@ defmodule Vimperfect.Puzzles.Puzzle do
   schema("puzzles") do
     field :slug, :string
     field :name, :string
+    field :complexity, Ecto.Enum, values: [:easy, :medium, :hard]
     field :description, :string
     field :initial_content, :string
+    field :initial_language, :string
     field :expected_content, :string
+    field :expected_language, :string
+    field :hints, {:array, :string}
     field :filename, :string
 
     belongs_to :author, Vimperfect.Accounts.User
@@ -23,10 +27,14 @@ defmodule Vimperfect.Puzzles.Puzzle do
     |> cast(attrs, [
       :name,
       :slug,
+      :complexity,
+      :hints,
       :description,
       :initial_content,
+      :initial_language,
       :filename,
       :expected_content,
+      :expected_language,
       :author_id
     ])
     # although author_id can be nil, it cannot be empty when updating from the app
@@ -52,9 +60,6 @@ defmodule Vimperfect.Puzzles.Puzzle do
         [filename: "not a valid filename"]
       end
     end)
-    |> unique_constraint(:name,
-      message: "this puzzle name is already used"
-    )
     |> unique_constraint(:slug,
       message: "this slug is already used"
     )

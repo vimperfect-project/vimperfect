@@ -126,24 +126,17 @@ defmodule Vimperfect.Puzzles do
     Repo.one(query)
   end
 
-  @doc """
-  Takes an abritrary puzzle name string and converts it to a url-friendly slug
+  @doc "Checks if the given slug is valid"
+  def valid_slug?(slug) do
+    get_puzzle_slug(slug) == slug
+  end
 
-  ## Examples
-      iex> get_puzzle_slug("Hello, World!")
-      "hello-world"
-  """
-  def get_puzzle_slug(name) do
+  defp get_puzzle_slug(name) do
     name
     |> String.downcase()
     |> String.replace(~r/[^\w\s-]/, "")
     |> String.replace(~r/\s+/, "-")
     |> String.trim("-")
-  end
-
-  @doc "Checks if the given slug is valid"
-  def valid_slug?(slug) do
-    get_puzzle_slug(slug) == slug
   end
 
   @doc """

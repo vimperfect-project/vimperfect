@@ -37,6 +37,8 @@ defmodule Vimperfect.MixProject do
       {:ueberauth, "~> 0.7.0"},
       {:ueberauth_github, "~> 0.8.1"},
       {:ecto_commons, "~> 0.3.4"},
+      {:mdex, "~> 0.3.3"},
+      {:yaml_elixir, "~> 2.11.0"},
 
       # Default Phoenix deps
       {:phoenix, "~> 1.7.14"},

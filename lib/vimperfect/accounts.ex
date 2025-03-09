@@ -38,6 +38,10 @@ defmodule Vimperfect.Accounts do
     end
   end
 
+  def get_user_by_username!(username) do
+    Repo.get_by!(User, username: username)
+  end
+
   @doc """
   Updates a user, raises if attrs are invalid.
   """

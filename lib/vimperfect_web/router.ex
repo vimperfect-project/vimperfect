@@ -15,6 +15,10 @@ defmodule VimperfectWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :github_webhooks do
+    plug VimperfectWeb.Plugs.ValidateGithubWebhook
+  end
+
   pipeline :auth do
     plug VimperfectWeb.Plugs.EnsureAuth
   end
@@ -34,6 +38,12 @@ defmodule VimperfectWeb.Router do
     live "/", IndexLive.Index, :index
   end
 
+  scope "/webhooks", VimperfectWeb do
+    pipe_through [:api, :github_webhooks]
+
+    post "/github/push", GithubController, :push
+  end
+
   # Authorized routes
   scope "/", VimperfectWeb do
     pipe_through [:browser, :auth]
@@ -45,11 +55,6 @@ defmodule VimperfectWeb.Router do
 
     get "/puzzles/:slug", PuzzleController, :show
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", VimperfectWeb do
-  #   pipe_through :api
-  # end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:vimperfect, :dev_routes) do

@@ -11,6 +11,12 @@ config :vimperfect,
   ecto_repos: [Vimperfect.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+config :vimperfect, Vimperfect.GithubPuzzles,
+  # Only commits to this branch will be processed
+  branch: "main",
+  # Files under this directory are recognized as puzzle files
+  puzzles_directory: "puzzles"
+
 config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: "user:email,user:read"]}
